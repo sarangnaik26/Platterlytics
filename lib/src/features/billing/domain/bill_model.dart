@@ -24,6 +24,7 @@ class BillItem {
       'id': id,
       'bill_id': billId,
       'menu_id': menuId,
+      'item_name': itemName,
       'unit': unit,
       'quantity': quantity,
       'price': price,

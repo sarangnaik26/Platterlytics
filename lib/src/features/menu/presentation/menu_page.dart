@@ -14,6 +14,7 @@ class MenuPage extends ConsumerStatefulWidget {
 
 class _MenuPageState extends ConsumerState<MenuPage> {
   int? _selectedCategoryId;
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +50,9 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                     prefixIcon: Icon(Icons.search),
                   ),
                   onChanged: (value) {
-                    // Implement Search Filter
+                    setState(() {
+                      _searchQuery = value;
+                    });
                   },
                 ),
               ),
@@ -73,10 +76,6 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                       );
                     }
                     final category = categories[index];
-
-                    // Default select first if null? Or "All"?
-                    // Logic: If _selectedCategoryId is null, maybe show all?
-                    // Let's assume selecting a category filters the view.
 
                     return ChoiceChip(
                       label: Text(category.name),
@@ -104,6 +103,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                 child: _MenuContent(
                   categories: categories,
                   selectedCategoryId: _selectedCategoryId,
+                  searchQuery: _searchQuery,
                 ),
               ),
             ],
@@ -136,7 +136,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
   void _showAddItemDialog(int categoryId) {
     showDialog(
       context: context,
-      builder: (_) => AddMenuItemDialog(categoryId: categoryId),
+      builder: (_) => MenuItemDialog(categoryId: categoryId),
     );
   }
 }
@@ -144,15 +144,16 @@ class _MenuPageState extends ConsumerState<MenuPage> {
 class _MenuContent extends ConsumerWidget {
   final List<Category> categories;
   final int? selectedCategoryId;
+  final String searchQuery;
 
-  const _MenuContent({required this.categories, this.selectedCategoryId});
+  const _MenuContent({
+    required this.categories,
+    this.selectedCategoryId,
+    required this.searchQuery,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // If selectedCategoryId is NOT null, show that category card.
-    // If null, show ALL.
-
-    // If selectedCategoryId is NOT null, selected category comes first.
     final displayCategories = List<Category>.from(categories);
 
     if (selectedCategoryId != null) {
@@ -170,7 +171,7 @@ class _MenuContent extends ConsumerWidget {
       itemCount: displayCategories.length,
       itemBuilder: (context, index) {
         final category = displayCategories[index];
-        return CategoryCard(category: category);
+        return CategoryCard(category: category, searchQuery: searchQuery);
       },
     );
   }
@@ -178,8 +179,13 @@ class _MenuContent extends ConsumerWidget {
 
 class CategoryCard extends ConsumerWidget {
   final Category category;
+  final String searchQuery;
 
-  const CategoryCard({super.key, required this.category});
+  const CategoryCard({
+    super.key,
+    required this.category,
+    required this.searchQuery,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -187,123 +193,147 @@ class CategoryCard extends ConsumerWidget {
       menuItemsProvider(categoryId: category.id),
     );
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Color(category.color), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Color(category.color).withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  category.name,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(category.color),
+    return menuItemsAsync.when(
+      data: (items) {
+        final filteredItems = items.where((item) {
+          if (searchQuery.isEmpty) return true;
+          return item.itemName.toLowerCase().contains(
+            searchQuery.toLowerCase(),
+          );
+        }).toList();
+
+        if (filteredItems.isEmpty && searchQuery.isNotEmpty) {
+          return const SizedBox.shrink(); // Hide category if no matches
+        }
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Color(category.color), width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Color(category.color).withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
                   ),
                 ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  color: Color(category.color),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) =>
-                          AddMenuItemDialog(categoryId: category.id!),
+                child: Row(
+                  children: [
+                    Text(
+                      category.name,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(category.color),
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline),
+                      color: Color(category.color),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) =>
+                              MenuItemDialog(categoryId: category.id!),
+                        );
+                      },
+                    ),
+                    PopupMenuButton(
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'rename',
+                          child: Text("Rename"),
+                        ),
+                        const PopupMenuItem(
+                          value: 'priority',
+                          child: Text("Set Priority"),
+                        ),
+                        const PopupMenuItem(
+                          value: 'color',
+                          child: Text("Color Code"),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Text(
+                            "Delete",
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                      onSelected: (value) {
+                        if (value == 'delete') {
+                          ref
+                              .read(categoriesProvider.notifier)
+                              .delete(category.id!);
+                        } else if (value == 'rename') {
+                          showDialog(
+                            context: context,
+                            builder: (_) =>
+                                RenameCategoryDialog(category: category),
+                          );
+                        }
+                        // Handle others
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              if (filteredItems.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text("No items"),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filteredItems.length,
+                  itemBuilder: (context, index) {
+                    final item = filteredItems[index];
+                    return ListTile(
+                      title: Text(item.itemName),
+                      subtitle: Text(
+                        item.prices
+                            .map((p) => "${p.unit}: ${p.price}")
+                            .join(", "),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.more_vert),
+                        onPressed: () {
+                          // Edit/Delete Item
+                        },
+                      ),
                     );
                   },
                 ),
-                PopupMenuButton(
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'rename', child: Text("Rename")),
-                    const PopupMenuItem(
-                      value: 'priority',
-                      child: Text("Set Priority"),
-                    ),
-                    const PopupMenuItem(
-                      value: 'color',
-                      child: Text("Color Code"),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text(
-                        "Delete",
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'delete') {
-                      ref
-                          .read(categoriesProvider.notifier)
-                          .delete(category.id!);
-                    } else if (value == 'rename') {
-                      showDialog(
-                        context: context,
-                        builder: (_) =>
-                            RenameCategoryDialog(category: category),
-                      );
-                    }
-                    // Handle others
-                  },
-                ),
-              ],
-            ),
+            ],
           ),
-          menuItemsAsync.when(
-            data: (items) {
-              if (items.isEmpty)
-                return const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text("No items"),
-                );
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return ListTile(
-                    title: Text(item.itemName),
-                    subtitle: Text(
-                      item.prices
-                          .map((p) => "${p.unit}: ${p.price}")
-                          .join(", "),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.more_vert),
-                      onPressed: () {
-                        // Edit/Delete Item
-                      },
-                    ),
-                  );
-                },
-              );
-            },
-            loading: () => const Padding(
-              padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(),
-            ),
-            error: (e, s) => Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text("Error loading items: $e"),
-            ),
-          ),
-        ],
+        );
+      },
+      loading: () => Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (e, s) => Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text("Error loading items: $e"),
+        ),
       ),
     );
   }
@@ -363,49 +393,160 @@ class _AddCategoryDialogState extends ConsumerState<AddCategoryDialog> {
   }
 }
 
-class AddMenuItemDialog extends ConsumerStatefulWidget {
+class MenuItemDialog extends ConsumerStatefulWidget {
   final int categoryId;
-  const AddMenuItemDialog({super.key, required this.categoryId});
+  final MenuItem? itemToEdit;
+  const MenuItemDialog({super.key, required this.categoryId, this.itemToEdit});
 
   @override
-  ConsumerState<AddMenuItemDialog> createState() => _AddMenuItemDialogState();
+  ConsumerState<MenuItemDialog> createState() => _MenuItemDialogState();
 }
 
-class _AddMenuItemDialogState extends ConsumerState<AddMenuItemDialog> {
+class _MenuItemDialogState extends ConsumerState<MenuItemDialog> {
   final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _unitController = TextEditingController(text: "Plate");
+
+  // List to hold the controllers for each price entry
+  final List<Map<String, dynamic>> _priceEntries = [];
+
+  final List<String> _unitOptions = ['Piece', 'Plate', 'Kg', 'Liter'];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.itemToEdit != null) {
+      _nameController.text = widget.itemToEdit!.itemName;
+      for (var price in widget.itemToEdit!.prices) {
+        _priceEntries.add({
+          'unit': price.unit,
+          'priceController': TextEditingController(
+            text: price.price.toString(),
+          ),
+        });
+      }
+      if (_priceEntries.isEmpty) {
+        _addPriceEntry();
+      }
+    } else {
+      _addPriceEntry();
+    }
+  }
+
+  void _addPriceEntry() {
+    setState(() {
+      _priceEntries.add({
+        'unit': _unitOptions.first, // Default unit
+        'priceController': TextEditingController(),
+      });
+    });
+  }
+
+  void _removePriceEntry(int index) {
+    if (_priceEntries.length > 1) {
+      setState(() {
+        _priceEntries[index]['priceController'].dispose();
+        _priceEntries.removeAt(index);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    for (var entry in _priceEntries) {
+      entry['priceController'].dispose();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text("Add Item"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(labelText: "Item Name"),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _unitController,
-                  decoration: const InputDecoration(labelText: "Unit"),
+      title: Text(widget.itemToEdit != null ? "Edit Item" : "Add Item"),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: "Item Name"),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Prices & Units",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ..._priceEntries.asMap().entries.map((entry) {
+              final index = entry.key;
+              final data = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: DropdownButtonFormField<String>(
+                        value: data['unit'],
+                        decoration: const InputDecoration(
+                          labelText: "Unit",
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 0,
+                          ),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _unitOptions.map((unit) {
+                          return DropdownMenuItem(
+                            value: unit,
+                            child: Text(unit),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              data['unit'] = value;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: data['priceController'],
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: "Price",
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 0,
+                          ),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.remove_circle_outline,
+                        color: Colors.red,
+                      ),
+                      onPressed: _priceEntries.length > 1
+                          ? () => _removePriceEntry(index)
+                          : null,
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _priceController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: "Price"),
-                ),
-              ),
-            ],
-          ),
-        ],
+              );
+            }),
+            TextButton.icon(
+              onPressed: _addPriceEntry,
+              icon: const Icon(Icons.add),
+              label: const Text("Add Another Price"),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -414,15 +555,86 @@ class _AddMenuItemDialogState extends ConsumerState<AddMenuItemDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            if (_nameController.text.isNotEmpty &&
-                _priceController.text.isNotEmpty) {
-              final price = double.tryParse(_priceController.text) ?? 0.0;
-              final newItem = MenuItem(
-                itemName: _nameController.text,
-                categoryId: widget.categoryId,
-                prices: [MenuPrice(unit: _unitController.text, price: price)],
-              );
-              ref.read(menuControllerProvider.notifier).addMenuItem(newItem);
+            if (_nameController.text.isNotEmpty) {
+              final List<MenuPrice> prices = [];
+              for (var entry in _priceEntries) {
+                final priceText = entry['priceController'].text;
+                if (priceText.isNotEmpty) {
+                  final price = double.tryParse(priceText) ?? 0.0;
+                  prices.add(MenuPrice(unit: entry['unit'], price: price));
+                }
+              }
+
+              if (prices.isNotEmpty) {
+                final newItem = MenuItem(
+                  menuId: widget.itemToEdit?.menuId,
+                  itemName: _nameController.text,
+                  categoryId: widget.categoryId,
+                  prices: prices,
+                );
+
+                if (widget.itemToEdit != null) {
+                  ref
+                      .read(menuControllerProvider.notifier)
+                      .updateMenuItem(newItem);
+                } else {
+                  ref
+                      .read(menuControllerProvider.notifier)
+                      .addMenuItem(newItem);
+                }
+                Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Please enter at least one valid price"),
+                  ),
+                );
+              }
+            }
+          },
+          child: const Text("Save"),
+        ),
+      ],
+    );
+  }
+}
+
+class RenameItemDialog extends ConsumerStatefulWidget {
+  final MenuItem item;
+  const RenameItemDialog({super.key, required this.item});
+
+  @override
+  ConsumerState<RenameItemDialog> createState() => _RenameItemDialogState();
+}
+
+class _RenameItemDialogState extends ConsumerState<RenameItemDialog> {
+  late TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.item.itemName);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Rename Item"),
+      content: TextField(
+        controller: _nameController,
+        decoration: const InputDecoration(labelText: "Item Name"),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final name = _nameController.text;
+            if (name.isNotEmpty) {
+              final updated = widget.item.copyWith(itemName: name);
+              ref.read(menuControllerProvider.notifier).updateMenuItem(updated);
               Navigator.pop(context);
             }
           },

@@ -92,6 +92,55 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
               ],
             ),
           ),
+          if (isRangeMode) ...[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  ActionChip(
+                    label: const Text("This Week"),
+                    onPressed: () {
+                      final now = DateTime.now();
+                      setState(() {
+                        selectedRange = DateTimeRange(
+                          start: now.subtract(Duration(days: now.weekday - 1)),
+                          end: now,
+                        );
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ActionChip(
+                    label: const Text("This Month"),
+                    onPressed: () {
+                      final now = DateTime.now();
+                      setState(() {
+                        selectedRange = DateTimeRange(
+                          start: DateTime(now.year, now.month, 1),
+                          end: now,
+                        );
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ActionChip(
+                    label: const Text("Last 7 Days"),
+                    onPressed: () {
+                      final now = DateTime.now();
+                      setState(() {
+                        selectedRange = DateTimeRange(
+                          start: now.subtract(const Duration(days: 6)),
+                          end: now,
+                        );
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
 
           if (isRangeMode)
             Padding(

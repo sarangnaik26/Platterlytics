@@ -8,6 +8,7 @@ import '../../menu/presentation/menu_providers.dart';
 import '../data/bill_repository.dart';
 import '../domain/bill_model.dart';
 import 'cart_provider.dart';
+import 'bill_success_view.dart';
 
 class BillComposerPage extends ConsumerStatefulWidget {
   const BillComposerPage({super.key});
@@ -18,6 +19,7 @@ class BillComposerPage extends ConsumerStatefulWidget {
 
 class _BillComposerPageState extends ConsumerState<BillComposerPage> {
   int? _selectedCategoryId;
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +40,22 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
 
                 return Column(
                   children: [
+                    // Search Bar
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: TextField(
+                        decoration: const InputDecoration(
+                          hintText: 'Search items...',
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                        },
+                      ),
+                    ),
+
                     // Search and Chips
                     SizedBox(
                       height: 60,
@@ -81,6 +99,7 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
                       child: _BillingContent(
                         categories: categories,
                         selectedCategoryId: _selectedCategoryId,
+                        searchQuery: _searchQuery,
                       ),
                     ),
                   ],
@@ -131,30 +150,18 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
                             );
 
                             try {
-                              await ref
+                              final billId = await ref
                                   .read(billRepositoryProvider)
                                   .createBill(bill);
 
                               if (context.mounted) {
                                 ref.read(cartProvider.notifier).clear();
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: const Text("Success"),
-                                    content: const Text(
-                                      "Bill saved successfully!",
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(
-                                            context,
-                                          ); // Close Dialog
-                                          Navigator.pop(context); // Close Page
-                                        },
-                                        child: const Text("OK"),
-                                      ),
-                                    ],
+                                final savedBill = bill.copyWith(billId: billId);
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        BillSuccessView(bill: savedBill),
                                   ),
                                 );
                               }
@@ -188,8 +195,13 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
 class _BillingContent extends ConsumerWidget {
   final List<Category> categories;
   final int? selectedCategoryId;
+  final String searchQuery;
 
-  const _BillingContent({required this.categories, this.selectedCategoryId});
+  const _BillingContent({
+    required this.categories,
+    this.selectedCategoryId,
+    required this.searchQuery,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -201,7 +213,10 @@ class _BillingContent extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       itemCount: displayCategories.length,
       itemBuilder: (context, index) {
-        return BillingCategoryCard(category: displayCategories[index]);
+        return BillingCategoryCard(
+          category: displayCategories[index],
+          searchQuery: searchQuery,
+        );
       },
     );
   }
@@ -209,7 +224,13 @@ class _BillingContent extends ConsumerWidget {
 
 class BillingCategoryCard extends ConsumerWidget {
   final Category category;
-  const BillingCategoryCard({super.key, required this.category});
+  final String searchQuery;
+
+  const BillingCategoryCard({
+    super.key,
+    required this.category,
+    required this.searchQuery,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -217,45 +238,60 @@ class BillingCategoryCard extends ConsumerWidget {
       menuItemsProvider(categoryId: category.id),
     );
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Color(category.color), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Color(category.color).withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Text(
-              category.name,
-              style: TextStyle(
-                color: Color(category.color),
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-          ),
+    return menuItemsAsync.when(
+      data: (items) {
+        final filteredItems = items.where((item) {
+          if (searchQuery.isEmpty) return true;
+          return item.itemName.toLowerCase().contains(
+            searchQuery.toLowerCase(),
+          );
+        }).toList();
 
-          menuItemsAsync.when(
-            data: (items) {
-              if (items.isEmpty) return const SizedBox.shrink();
-              return ListView.separated(
+        if (filteredItems.isEmpty && searchQuery.isNotEmpty)
+          return const SizedBox.shrink();
+
+        // Even if items is empty (e.g. empty category without search), we might want to hide it in billing to avoid clutter
+        if (items.isEmpty && searchQuery.isEmpty)
+          return const SizedBox.shrink();
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Color(category.color), width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Color(category.color).withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  category.name,
+                  style: TextStyle(
+                    color: Color(category.color),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+              ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: items.length,
+                itemCount: filteredItems.length,
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {
-                  final item = items[index];
+                  final item = filteredItems[index];
                   return ListTile(
                     title: Text(item.itemName),
                     subtitle: Wrap(
@@ -273,16 +309,16 @@ class BillingCategoryCard extends ConsumerWidget {
                     ),
                   );
                 },
-              );
-            },
-            loading: () => const Padding(
-              padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(),
-            ),
-            error: (e, s) => const SizedBox(),
+              ),
+            ],
           ),
-        ],
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
       ),
+      error: (e, s) => const SizedBox(),
     );
   }
 

@@ -24,6 +24,7 @@ class AnalyticsRepository {
     final avgBillValue = billCount == 0 ? 0.0 : totalSales / billCount;
 
     // Hourly Sales for Chart
+    // Hourly Sales for Chart
     final hourlyData = await db.rawQuery(
       '''
       SELECT SUBSTR(time, 1, 2) as hour, SUM(total_price) as sales
@@ -35,11 +36,23 @@ class AnalyticsRepository {
       [date],
     );
 
+    // Hourly Sales for Chart - Ensure all 24 hours or at least a full range
+    final List<Map<String, dynamic>> hourlySales = [];
+    final Map<String, double> hourlyMap = {
+      for (var row in hourlyData)
+        row['hour'] as String: (row['sales'] as num).toDouble(),
+    };
+
+    for (int i = 0; i < 24; i++) {
+      final h = i.toString().padLeft(2, '0');
+      hourlySales.add({'hour': h, 'sales': hourlyMap[h] ?? 0.0});
+    }
+
     return {
       'totalSales': totalSales,
       'billCount': billCount,
       'avgBillValue': avgBillValue,
-      'hourlySales': hourlyData, // List<Map<String, dynamic>>
+      'hourlySales': hourlySales,
     };
   }
 
@@ -61,6 +74,7 @@ class AnalyticsRepository {
     final avgBillValue = billCount == 0 ? 0.0 : totalSales / billCount;
 
     // Daily Sales for Chart
+    // Daily Sales for Chart
     final dailyData = await db.rawQuery(
       '''
       SELECT date, SUM(total_price) as sales
@@ -72,11 +86,26 @@ class AnalyticsRepository {
       [startDate, endDate],
     );
 
+    // Daily Sales for Chart - Fill missing dates
+    final List<Map<String, dynamic>> dailySales = [];
+    final Map<String, double> dailyMap = {
+      for (var row in dailyData)
+        row['date'] as String: (row['sales'] as num).toDouble(),
+    };
+
+    DateTime start = DateTime.parse(startDate);
+    DateTime end = DateTime.parse(endDate);
+    for (int i = 0; i <= end.difference(start).inDays; i++) {
+      final d = start.add(Duration(days: i));
+      final dateStr = d.toIso8601String().split('T')[0];
+      dailySales.add({'date': dateStr, 'sales': dailyMap[dateStr] ?? 0.0});
+    }
+
     return {
       'totalSales': totalSales,
       'billCount': billCount,
       'avgBillValue': avgBillValue,
-      'dailySales': dailyData,
+      'dailySales': dailySales,
     };
   }
 
@@ -115,11 +144,21 @@ class AnalyticsRepository {
       [menuId, date],
     );
 
+    // Hourly Item Sales - Fill gaps
+    final List<Map<String, dynamic>> hourlyDataComplete = [];
+    final Map<String, int> hourlyMap = {
+      for (var row in hourlyData) row['hour'] as String: row['qty'] as int,
+    };
+    for (int i = 0; i < 24; i++) {
+      final h = i.toString().padLeft(2, '0');
+      hourlyDataComplete.add({'hour': h, 'qty': hourlyMap[h] ?? 0});
+    }
+
     return {
       'totalSales': totalSales,
       'billCount': billCount,
       'totalQty': totalQty,
-      'hourlyData': hourlyData,
+      'hourlyData': hourlyDataComplete,
     };
   }
 
@@ -157,11 +196,24 @@ class AnalyticsRepository {
       [menuId, startDate, endDate],
     );
 
+    // Daily Item Sales - Fill gaps
+    final List<Map<String, dynamic>> dailyDataComplete = [];
+    final Map<String, int> dailyMap = {
+      for (var row in dailyData) row['date'] as String: row['qty'] as int,
+    };
+    DateTime start = DateTime.parse(startDate);
+    DateTime end = DateTime.parse(endDate);
+    for (int i = 0; i <= end.difference(start).inDays; i++) {
+      final d = start.add(Duration(days: i));
+      final dateStr = d.toIso8601String().split('T')[0];
+      dailyDataComplete.add({'date': dateStr, 'qty': dailyMap[dateStr] ?? 0});
+    }
+
     return {
       'totalSales': totalSales,
       'billCount': billCount,
       'totalQty': totalQty,
-      'dailyData': dailyData,
+      'dailyData': dailyDataComplete,
     };
   }
 }
