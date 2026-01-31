@@ -18,7 +18,7 @@ class MyApp extends ConsumerWidget {
     return MaterialApp(
       title: 'Platterlytics',
       theme: AppTheme.lightTheme,
-      darkTheme: ThemeData.dark(useMaterial3: true), // Basic dark theme for now
+      darkTheme: AppTheme.darkTheme,
       themeMode: themeMode.value ?? ThemeMode.system,
       home: const MainScreen(),
       debugShowCheckedModeBanner: false,

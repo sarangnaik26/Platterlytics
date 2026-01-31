@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../billing/data/bill_repository.dart';
 import '../../billing/domain/bill_model.dart';
+import '../../settings/presentation/bill_settings_provider.dart';
 
 // Provider for History
 final billHistoryProvider = FutureProvider.autoDispose
@@ -32,6 +33,7 @@ class _BillHistoryPageState extends ConsumerState<BillHistoryPage> {
         : null;
 
     final billsAsync = ref.watch(billHistoryProvider(filterDate));
+    final symbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -70,7 +72,9 @@ class _BillHistoryPageState extends ConsumerState<BillHistoryPage> {
               final bill = bills[index];
               return ListTile(
                 leading: CircleAvatar(child: Text(bill.billId.toString())),
-                title: Text("Total: ${bill.totalPrice.toStringAsFixed(2)}"),
+                title: Text(
+                  "Total: $symbol${bill.totalPrice.toStringAsFixed(2)}",
+                ),
                 subtitle: Text("${bill.date} ${bill.time}"),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
@@ -92,19 +96,20 @@ class _BillHistoryPageState extends ConsumerState<BillHistoryPage> {
   }
 }
 
-class BillDetailsPage extends StatelessWidget {
+class BillDetailsPage extends ConsumerWidget {
   final Bill bill;
   const BillDetailsPage({super.key, required this.bill});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final symbol = ref.watch(currencySymbolProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text("Bill #${bill.billId}"),
         actions: [
           IconButton(
             icon: const Icon(Icons.print),
-            onPressed: () => _printBill(bill),
+            onPressed: () => _printBill(bill, symbol),
           ),
         ],
       ),
@@ -114,7 +119,7 @@ class BillDetailsPage extends StatelessWidget {
             title: Text("Date: ${bill.date}"),
             subtitle: Text("Time: ${bill.time}"),
             trailing: Text(
-              "Total: ${bill.totalPrice.toStringAsFixed(2)}",
+              "Total: $symbol${bill.totalPrice.toStringAsFixed(2)}",
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
           ),
@@ -128,9 +133,11 @@ class BillDetailsPage extends StatelessWidget {
                 return ListTile(
                   title: Text(item.itemName),
                   subtitle: Text(
-                    "${item.quantity} x ${item.unit} @ ${item.price}",
+                    "${item.quantity} x ${item.unit} @ $symbol${item.price}",
                   ),
-                  trailing: Text(item.totalItemPrice.toStringAsFixed(2)),
+                  trailing: Text(
+                    "$symbol${item.totalItemPrice.toStringAsFixed(2)}",
+                  ),
                 );
               },
             ),
@@ -140,7 +147,7 @@ class BillDetailsPage extends StatelessWidget {
     );
   }
 
-  Future<void> _printBill(Bill bill) async {
+  Future<void> _printBill(Bill bill, String symbol) async {
     final doc = pw.Document();
 
     doc.addPage(
@@ -172,7 +179,7 @@ class BillDetailsPage extends StatelessWidget {
                         "${item.quantity} x ${item.itemName} (${item.unit})",
                       ),
                     ),
-                    pw.Text(item.totalItemPrice.toStringAsFixed(2)),
+                    pw.Text("$symbol${item.totalItemPrice.toStringAsFixed(2)}"),
                   ],
                 ),
               ),
@@ -185,7 +192,7 @@ class BillDetailsPage extends StatelessWidget {
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                   ),
                   pw.Text(
-                    bill.totalPrice.toStringAsFixed(2),
+                    "$symbol${bill.totalPrice.toStringAsFixed(2)}",
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                   ),
                 ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../settings/presentation/bill_settings_provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../menu/domain/category.dart';
@@ -26,6 +27,7 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
     final categoriesAsync = ref.watch(categoriesProvider);
     final cartTotalValue = ref.watch(cartTotalProvider);
     final cartItems = ref.watch(cartProvider);
+    final symbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text("New Bill")),
@@ -84,9 +86,7 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
                               category.color,
                             ).withOpacity(0.2), // Deprecated?
                             labelStyle: TextStyle(
-                              color: isSelected
-                                  ? Color(category.color)
-                                  : AppColors.textPrimary,
+                              color: isSelected ? Color(category.color) : null,
                             ),
                           );
                         },
@@ -173,7 +173,9 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
                               }
                             }
                           },
-                    child: Text("Done (${cartTotalValue.toStringAsFixed(2)})"),
+                    child: Text(
+                      "Done ($symbol${cartTotalValue.toStringAsFixed(2)})",
+                    ),
                   ),
                 ),
               ],
@@ -205,9 +207,21 @@ class _BillingContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final displayCategories = selectedCategoryId == null
-        ? categories
-        : categories.where((c) => c.id == selectedCategoryId).toList();
+    // Improve: Instead of filtering, we just scroll to the category (TODO if ScrollController added)
+    // For now, per user request, we do NOT filter them out.
+    // They wanted "other categories to appear below", i.e. show all.
+    final displayCategories = categories;
+
+    // Sorting: If selected, maybe move to top?
+    // User said: "that category comes on top and rest all categories disapear, but i want other categories to appear below"
+    // So let's sort the selected index to 0, and others follow.
+    if (selectedCategoryId != null) {
+      displayCategories.sort((a, b) {
+        if (a.id == selectedCategoryId) return -1;
+        if (b.id == selectedCategoryId) return 1;
+        return a.priority.compareTo(b.priority);
+      });
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -237,6 +251,7 @@ class BillingCategoryCard extends ConsumerWidget {
     final menuItemsAsync = ref.watch(
       menuItemsProvider(categoryId: category.id),
     );
+    final symbol = ref.watch(currencySymbolProvider);
 
     return menuItemsAsync.when(
       data: (items) {
@@ -294,18 +309,18 @@ class BillingCategoryCard extends ConsumerWidget {
                   final item = filteredItems[index];
                   return ListTile(
                     title: Text(item.itemName),
-                    subtitle: Wrap(
-                      spacing: 8,
-                      children: item.prices
-                          .map(
-                            (p) => ActionChip(
-                              label: Text("${p.unit}: ${p.price}"),
-                              onPressed: () {
-                                _showQuantityDialog(context, ref, item, p);
-                              },
-                            ),
-                          )
-                          .toList(),
+                    trailing: ElevatedButton(
+                      onPressed: () => _showAddItemDialog(context, ref, item),
+                      style: ElevatedButton.styleFrom(
+                        shape: const CircleBorder(),
+                        padding: const EdgeInsets.all(8),
+                      ),
+                      child: const Icon(Icons.add),
+                    ),
+                    subtitle: Text(
+                      item.prices
+                          .map((p) => "${p.unit}: $symbol${p.price}")
+                          .join(", "),
                     ),
                   );
                 },
@@ -322,48 +337,71 @@ class BillingCategoryCard extends ConsumerWidget {
     );
   }
 
-  void _showQuantityDialog(
-    BuildContext context,
-    WidgetRef ref,
-    MenuItem item,
-    MenuPrice price,
-  ) {
+  void _showAddItemDialog(BuildContext context, WidgetRef ref, MenuItem item) {
+    // If multiple prices, let user select. Default to first.
+    MenuPrice selectedPrice = item.prices.first;
     final quantityController = TextEditingController(text: "1");
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text("Add ${item.itemName}"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text("Unit: ${price.unit} - Price: ${price.price}"),
-              TextField(
-                controller: quantityController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: "Quantity"),
-                autofocus: true,
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text("Add ${item.itemName}"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<MenuPrice>(
+                    value: selectedPrice,
+                    decoration: const InputDecoration(labelText: "Unit"),
+                    items: item.prices.map((p) {
+                      return DropdownMenuItem(
+                        value: p,
+                        child: Text(
+                          "${p.unit} - ${ref.read(currencySymbolProvider)}${p.price}",
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => selectedPrice = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: quantityController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Quantity"),
+                    autofocus: true,
+                  ),
+                ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final qty = int.tryParse(quantityController.text) ?? 1;
-                if (qty > 0) {
-                  ref
-                      .read(cartProvider.notifier)
-                      .addItem(menuItem: item, price: price, quantity: qty);
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Add"),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final qty = int.tryParse(quantityController.text) ?? 1;
+                    if (qty > 0) {
+                      ref
+                          .read(cartProvider.notifier)
+                          .addItem(
+                            menuItem: item,
+                            price: selectedPrice,
+                            quantity: qty,
+                          );
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text("Add"),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -376,6 +414,7 @@ class CartBottomSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cartItems = ref.watch(cartProvider);
+    final symbol = ref.watch(currencySymbolProvider);
 
     return Column(
       children: [
@@ -400,13 +439,13 @@ class CartBottomSheet extends ConsumerWidget {
                 return ListTile(
                   title: Text(item.itemName),
                   subtitle: Text(
-                    "${item.quantity} x ${item.unit} @ ${item.price}",
+                    "${item.quantity} x ${item.unit} @ $symbol${item.price}",
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        item.totalItemPrice.toStringAsFixed(2),
+                        "$symbol${item.totalItemPrice.toStringAsFixed(2)}",
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       IconButton(

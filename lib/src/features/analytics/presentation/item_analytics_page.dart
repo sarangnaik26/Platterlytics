@@ -7,6 +7,7 @@ import '../../menu/domain/category.dart';
 import '../../menu/domain/menu_item.dart';
 import '../../menu/presentation/menu_providers.dart';
 import 'analytics_providers.dart';
+import '../../settings/presentation/bill_settings_provider.dart';
 
 class ItemAnalyticsPage extends ConsumerStatefulWidget {
   const ItemAnalyticsPage({super.key});
@@ -35,7 +36,9 @@ class _ItemAnalyticsPageState extends ConsumerState<ItemAnalyticsPage> {
                 hintText: "Search items...",
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[900]
+                    : Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -75,9 +78,7 @@ class _ItemAnalyticsPageState extends ConsumerState<ItemAnalyticsPage> {
                       ),
                       selectedColor: Color(category.color).withOpacity(0.2),
                       labelStyle: TextStyle(
-                        color: isSelected
-                            ? Color(category.color)
-                            : AppColors.textPrimary,
+                        color: isSelected ? Color(category.color) : null,
                       ),
                     );
                   },
@@ -278,6 +279,8 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
           )
         : ref.watch(itemDailyStatsProvider(widget.item.menuId!, formattedDate));
 
+    final symbol = ref.watch(currencySymbolProvider);
+
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.8,
@@ -286,9 +289,9 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
       builder: (context, scrollController) {
         return Container(
           padding: const EdgeInsets.all(16),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: ListView(
             controller: scrollController,
@@ -403,7 +406,7 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
                           Expanded(
                             child: _MetricCard(
                               "Sales",
-                              totalSales.toStringAsFixed(2),
+                              "$symbol${totalSales.toStringAsFixed(2)}",
                               Colors.green,
                             ),
                           ),

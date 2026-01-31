@@ -16,12 +16,30 @@ class _BillSettingsPageState extends ConsumerState<BillSettingsPage> {
   late TextEditingController _addressController;
   late TextEditingController _contactInfoController;
   late TextEditingController _footerNoteController;
+  String _selectedCurrency = '₹';
   bool _showBusinessName = true;
   bool _showAddress = true;
   bool _showContactInfo = true;
   bool _showFooterNote = true;
   bool _showOnBill = true;
   bool _isInit = false;
+
+  final List<Map<String, String>> _asianCurrencies = [
+    {'name': 'India', 'code': 'INR', 'symbol': '₹'},
+    {'name': 'Pakistan', 'code': 'PKR', 'symbol': '₨'},
+    {'name': 'Bangladesh', 'code': 'BDT', 'symbol': '৳'},
+    {'name': 'Sri Lanka', 'code': 'LKR', 'symbol': 'Rs'},
+    {'name': 'Nepal', 'code': 'NPR', 'symbol': 'Rs.'},
+    {'name': 'Japan', 'code': 'JPY', 'symbol': '¥'},
+    {'name': 'China', 'code': 'CNY', 'symbol': '¥'},
+    {'name': 'South Korea', 'code': 'KRW', 'symbol': '₩'},
+    {'name': 'Singapore', 'code': 'SGD', 'symbol': 'S\$'},
+    {'name': 'Malaysia', 'code': 'MYR', 'symbol': 'RM'},
+    {'name': 'Thailand', 'code': 'THB', 'symbol': '฿'},
+    {'name': 'Indonesia', 'code': 'IDR', 'symbol': 'Rp'},
+    {'name': 'Philippines', 'code': 'PHP', 'symbol': '₱'},
+    {'name': 'Vietnam', 'code': 'VND', 'symbol': '₫'},
+  ];
 
   @override
   void initState() {
@@ -47,6 +65,7 @@ class _BillSettingsPageState extends ConsumerState<BillSettingsPage> {
       _addressController.text = settings.address;
       _contactInfoController.text = settings.contactInfo;
       _footerNoteController.text = settings.footerNote;
+      _selectedCurrency = settings.currencySymbol;
       _showBusinessName = settings.showBusinessName;
       _showAddress = settings.showAddress;
       _showContactInfo = settings.showContactInfo;
@@ -70,6 +89,36 @@ class _BillSettingsPageState extends ConsumerState<BillSettingsPage> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                const Text(
+                  "Currency Settings",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value:
+                      _asianCurrencies.any(
+                        (c) => c['symbol'] == _selectedCurrency,
+                      )
+                      ? _selectedCurrency
+                      : '₹',
+                  decoration: const InputDecoration(
+                    labelText: "Select Currency",
+                    prefixIcon: Icon(Icons.currency_exchange),
+                  ),
+                  items: _asianCurrencies.map((c) {
+                    return DropdownMenuItem(
+                      value: c['symbol'],
+                      child: Text(
+                        "${c['name']} (${c['code']} - ${c['symbol']})",
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => _selectedCurrency = val);
+                  },
+                ),
+                const SizedBox(height: 24),
+                const Divider(),
                 SwitchListTile(
                   title: const Text("Show on Bill"),
                   subtitle: const Text(
@@ -127,6 +176,7 @@ class _BillSettingsPageState extends ConsumerState<BillSettingsPage> {
                         address: _addressController.text,
                         contactInfo: _contactInfoController.text,
                         footerNote: _footerNoteController.text,
+                        currencySymbol: _selectedCurrency,
                         showBusinessName: _showBusinessName,
                         showAddress: _showAddress,
                         showContactInfo: _showContactInfo,

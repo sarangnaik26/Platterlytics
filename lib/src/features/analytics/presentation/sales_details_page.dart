@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import 'analytics_providers.dart';
+import '../../settings/presentation/bill_settings_provider.dart';
 
 class SalesDetailsPage extends ConsumerStatefulWidget {
   const SalesDetailsPage({super.key});
@@ -34,10 +35,11 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
     final formattedDate = dateFormat.format(selectedDate);
     final formattedStart = dateFormat.format(selectedRange!.start);
     final formattedEnd = dateFormat.format(selectedRange!.end);
-
     final statsAsync = isRangeMode
         ? ref.watch(rangeStatsProvider(formattedStart, formattedEnd))
         : ref.watch(dailyStatsProvider(formattedDate));
+
+    final symbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Sales Details")),
@@ -178,7 +180,7 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
                       children: [
                         _MetricCard(
                           "Total Sales",
-                          totalSales.toStringAsFixed(2),
+                          "$symbol${totalSales.toStringAsFixed(2)}",
                           Colors.green,
                         ),
                         const SizedBox(width: 8),
@@ -186,7 +188,7 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
                         const SizedBox(width: 8),
                         _MetricCard(
                           "Avg Bill",
-                          avgBill.toStringAsFixed(2),
+                          "$symbol${avgBill.toStringAsFixed(2)}",
                           Colors.orange,
                         ),
                       ],
@@ -194,84 +196,112 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
                     const SizedBox(height: 24),
 
                     // Chart
-                    SizedBox(
-                      height: 300,
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: LineChart(
-                            LineChartData(
-                              gridData: FlGridData(show: false),
-                              titlesData: FlTitlesData(
-                                bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    getTitlesWidget: (value, meta) {
-                                      // Basic logic: Index based
-                                      if (value.toInt() >= 0 &&
-                                          value.toInt() < chartData.length) {
-                                        final item = chartData[value.toInt()];
-                                        if (isRangeMode) {
-                                          // Show date MM-dd
-                                          final d = DateTime.tryParse(
-                                            item['date'],
-                                          );
-                                          return Text(
-                                            DateFormat('MM-dd').format(d!),
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                            ),
-                                          );
-                                        } else {
-                                          // Show hour
-                                          return Text(
-                                            item['hour'],
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                            ),
-                                          );
-                                        }
-                                      }
-                                      return const Text('');
-                                    },
-                                  ),
-                                ),
-                                leftTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
-                                ),
-                                topTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
-                                ),
-                                rightTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
-                                ),
+                    // Chart
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Container(
+                        width: isRangeMode
+                            ? (chartData.length * 60.0).clamp(
+                                MediaQuery.of(context).size.width - 32,
+                                double.infinity,
+                              )
+                            : (chartData.length * 50.0).clamp(
+                                MediaQuery.of(context).size.width - 32,
+                                double.infinity,
                               ),
-                              borderData: FlBorderData(show: false),
-                              lineBarsData: [
-                                LineChartBarData(
-                                  spots: List.generate(chartData.length, (
-                                    index,
-                                  ) {
-                                    final item = chartData[index];
-                                    final val =
-                                        (item['sales'] as num?)?.toDouble() ??
-                                        0.0;
-                                    return FlSpot(index.toDouble(), val);
-                                  }),
-                                  isCurved: true,
-                                  color: AppColors.primary,
-                                  dotData: FlDotData(show: false),
-                                  belowBarData: BarAreaData(
-                                    show: true,
-                                    color: AppColors.primary.withOpacity(0.1),
+                        height: 300,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: BarChart(
+                              BarChartData(
+                                alignment: BarChartAlignment.spaceAround,
+                                gridData: FlGridData(show: false),
+                                titlesData: FlTitlesData(
+                                  bottomTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      getTitlesWidget: (value, meta) {
+                                        if (value.toInt() >= 0 &&
+                                            value.toInt() < chartData.length) {
+                                          final item = chartData[value.toInt()];
+                                          if (isRangeMode) {
+                                            final d = DateTime.tryParse(
+                                              item['date'],
+                                            );
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: 8.0,
+                                              ),
+                                              child: Text(
+                                                DateFormat('MM-dd').format(d!),
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            );
+                                          } else {
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: 8.0,
+                                              ),
+                                              child: Text(
+                                                "${item['hour']}:00",
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                        return const Text('');
+                                      },
+                                    ),
+                                  ),
+                                  leftTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                  topTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                  rightTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
                                   ),
                                 ),
-                              ],
+                                borderData: FlBorderData(show: false),
+                                barGroups: List.generate(chartData.length, (
+                                  index,
+                                ) {
+                                  final item = chartData[index];
+                                  final val =
+                                      (item['sales'] as num?)?.toDouble() ??
+                                      0.0;
+                                  return BarChartGroupData(
+                                    x: index,
+                                    barRods: [
+                                      BarChartRodData(
+                                        toY: val,
+                                        color: AppColors.primary,
+                                        width: 16,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ],
+                                  );
+                                }),
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 24),
+                    // High/Low Analysis
+                    if (chartData.isNotEmpty) ...[
+                      _buildAnalysisSection(chartData, symbol, isRangeMode),
+                      const SizedBox(height: 24),
+                    ],
                   ],
                 );
               },
@@ -280,6 +310,111 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAnalysisSection(
+    List<Map<String, dynamic>> data,
+    String symbol,
+    bool isRange,
+  ) {
+    if (data.isEmpty) return const SizedBox.shrink();
+
+    // Find High and Low
+    Map<String, dynamic> highest = data.first;
+    Map<String, dynamic> lowest = data.first;
+
+    for (var item in data) {
+      final sales = (item['sales'] as num).toDouble();
+      final highSales = (highest['sales'] as num).toDouble();
+      final lowSales = (lowest['sales'] as num).toDouble();
+
+      if (sales > highSales) highest = item;
+      if (sales < lowSales) lowest = item;
+    }
+
+    String getLabel(Map<String, dynamic> item) {
+      if (isRange) {
+        return DateFormat('MMM dd, yyyy').format(DateTime.parse(item['date']));
+      } else {
+        return "${item['hour']}:00 - ${item['hour']}:59";
+      }
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const Text(
+              "Sales Analysis",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const Divider(),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      const Text(
+                        "Highest Sales",
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "$symbol${(highest['sales'] as num).toStringAsFixed(2)}",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        getLabel(highest),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(width: 1, height: 50, color: Colors.grey.shade300),
+                Expanded(
+                  child: Column(
+                    children: [
+                      const Text(
+                        "Lowest Sales",
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "$symbol${(lowest['sales'] as num).toStringAsFixed(2)}",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        getLabel(lowest),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

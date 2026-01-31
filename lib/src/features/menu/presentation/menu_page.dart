@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../domain/category.dart';
 import '../domain/menu_item.dart';
 import 'menu_providers.dart';
+import '../../settings/presentation/bill_settings_provider.dart';
 
 class MenuPage extends ConsumerStatefulWidget {
   const MenuPage({super.key});
@@ -89,7 +90,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                       labelStyle: TextStyle(
                         color: _selectedCategoryId == category.id
                             ? Color(category.color)
-                            : AppColors.textPrimary,
+                            : null,
                       ),
                     );
                   },
@@ -192,6 +193,7 @@ class CategoryCard extends ConsumerWidget {
     final menuItemsAsync = ref.watch(
       menuItemsProvider(categoryId: category.id),
     );
+    final symbol = ref.watch(currencySymbolProvider);
 
     return menuItemsAsync.when(
       data: (items) {
@@ -305,7 +307,7 @@ class CategoryCard extends ConsumerWidget {
                       title: Text(item.itemName),
                       subtitle: Text(
                         item.prices
-                            .map((p) => "${p.unit}: ${p.price}")
+                            .map((p) => "${p.unit}: $symbol${p.price}")
                             .join(", "),
                       ),
                       trailing: IconButton(
@@ -517,13 +519,14 @@ class _MenuItemDialogState extends ConsumerState<MenuItemDialog> {
                       child: TextField(
                         controller: data['priceController'],
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: "Price",
-                          contentPadding: EdgeInsets.symmetric(
+                          prefixText: "${ref.watch(currencySymbolProvider)} ",
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: 10,
                             vertical: 0,
                           ),
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                     ),

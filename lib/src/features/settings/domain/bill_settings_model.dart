@@ -3,6 +3,7 @@ class BillSettings {
   final String address;
   final String contactInfo;
   final String footerNote;
+  final String currencySymbol;
   final bool showBusinessName;
   final bool showAddress;
   final bool showContactInfo;
@@ -14,6 +15,7 @@ class BillSettings {
     this.address = '',
     this.contactInfo = '',
     this.footerNote = 'Thank you for dining with us!',
+    this.currencySymbol = '₹',
     this.showBusinessName = true,
     this.showAddress = true,
     this.showContactInfo = true,
@@ -26,6 +28,7 @@ class BillSettings {
     String? address,
     String? contactInfo,
     String? footerNote,
+    String? currencySymbol,
     bool? showBusinessName,
     bool? showAddress,
     bool? showContactInfo,
@@ -37,6 +40,7 @@ class BillSettings {
       address: address ?? this.address,
       contactInfo: contactInfo ?? this.contactInfo,
       footerNote: footerNote ?? this.footerNote,
+      currencySymbol: currencySymbol ?? this.currencySymbol,
       showBusinessName: showBusinessName ?? this.showBusinessName,
       showAddress: showAddress ?? this.showAddress,
       showContactInfo: showContactInfo ?? this.showContactInfo,
@@ -51,6 +55,7 @@ class BillSettings {
       'address': address,
       'contactInfo': contactInfo,
       'footerNote': footerNote,
+      'currencySymbol': currencySymbol,
       'showBusinessName': showBusinessName,
       'showAddress': showAddress,
       'showContactInfo': showContactInfo,
@@ -65,6 +70,7 @@ class BillSettings {
       address: map['address'] ?? '',
       contactInfo: map['contactInfo'] ?? '',
       footerNote: map['footerNote'] ?? 'Thank you for dining with us!',
+      currencySymbol: map['currencySymbol'] ?? '₹',
       showBusinessName: map['showBusinessName'] ?? true,
       showAddress: map['showAddress'] ?? true,
       showContactInfo: map['showContactInfo'] ?? true,

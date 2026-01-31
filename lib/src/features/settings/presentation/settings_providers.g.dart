@@ -61,7 +61,7 @@ final cacheSettingsControllerProvider =
     );
 
 typedef _$CacheSettingsController = AutoDisposeAsyncNotifier<CacheSettings>;
-String _$cacheServiceHash() => r'c80eefa066150c4aab6d0ab2d1634c6d00d8d1e4';
+String _$cacheServiceHash() => r'6b7185387a8b71c10104d57cddaf812d2665c80a';
 
 /// See also [CacheService].
 @ProviderFor(CacheService)

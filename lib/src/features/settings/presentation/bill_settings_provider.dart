@@ -25,3 +25,13 @@ class BillSettingsController extends _$BillSettingsController {
     state = AsyncValue.data(settings);
   }
 }
+
+@riverpod
+String currencySymbol(CurrencySymbolRef ref) {
+  final settings = ref.watch(billSettingsControllerProvider);
+  return settings.when(
+    data: (s) => s.currencySymbol,
+    loading: () => '₹',
+    error: (e, s) => '₹',
+  );
+}

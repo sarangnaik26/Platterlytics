@@ -34,10 +34,11 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
     text += "--------------------------------\n";
     for (var item in bill.items) {
       text +=
-          "${item.itemName} (${item.quantity} x ${item.unit}) : ${item.totalItemPrice.toStringAsFixed(2)}\n";
+          "${item.itemName} (${item.quantity} x ${item.unit}) : ${settings.currencySymbol}${item.totalItemPrice.toStringAsFixed(2)}\n";
     }
     text += "--------------------------------\n";
-    text += "Total: ${bill.totalPrice.toStringAsFixed(2)}\n";
+    text +=
+        "Total: ${settings.currencySymbol}${bill.totalPrice.toStringAsFixed(2)}\n";
     if (settings.showOnBill && settings.showFooterNote) {
       text += "\n${settings.footerNote}";
     }
@@ -98,27 +99,34 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
                             style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
                           ),
                         if (settings.showAddress)
                           Text(
                             settings.address,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey),
+                            style: const TextStyle(color: Colors.black54),
                           ),
                         if (settings.showContactInfo)
                           Text(
                             settings.contactInfo,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey),
+                            style: const TextStyle(color: Colors.black54),
                           ),
                         const Divider(height: 24),
                       ],
                       Text(
                         "Bill #${widget.bill.billId}",
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
                       ),
-                      Text("Date: ${widget.bill.date} ${widget.bill.time}"),
+                      Text(
+                        "Date: ${widget.bill.date} ${widget.bill.time}",
+                        style: const TextStyle(color: Colors.black),
+                      ),
                       const Divider(height: 24),
                       ...widget.bill.items.map(
                         (item) => Padding(
@@ -129,9 +137,13 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
                               Expanded(
                                 child: Text(
                                   "${item.itemName} (${item.quantity} x ${item.unit})",
+                                  style: const TextStyle(color: Colors.black),
                                 ),
                               ),
-                              Text(item.totalItemPrice.toStringAsFixed(2)),
+                              Text(
+                                "${settings.currencySymbol}${item.totalItemPrice.toStringAsFixed(2)}",
+                                style: const TextStyle(color: Colors.black),
+                              ),
                             ],
                           ),
                         ),
@@ -145,10 +157,11 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
                           ),
                           Text(
-                            widget.bill.totalPrice.toStringAsFixed(2),
+                            "${settings.currencySymbol}${widget.bill.totalPrice.toStringAsFixed(2)}",
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -164,7 +177,7 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontStyle: FontStyle.italic,
-                            color: Colors.grey,
+                            color: Colors.black54,
                           ),
                         ),
                       ],
@@ -174,13 +187,21 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
                           data: _generateQrData(widget.bill, settings),
                           version: QrVersions.auto,
                           size: 150.0,
+                          eyeStyle: const QrEyeStyle(
+                            eyeShape: QrEyeShape.square,
+                            color: Colors.black,
+                          ),
+                          dataModuleStyle: const QrDataModuleStyle(
+                            dataModuleShape: QrDataModuleShape.square,
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 8),
                       const Text(
                         "Scan to view bill",
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: TextStyle(fontSize: 12, color: Colors.black45),
                       ),
                     ],
                   ),
@@ -234,7 +255,8 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
       text += "${settings.businessName}\n";
     }
     text += "Bill ID: ${bill.billId}\n";
-    text += "Total: ${bill.totalPrice.toStringAsFixed(2)}\n";
+    text +=
+        "Total: ${settings.currencySymbol}${bill.totalPrice.toStringAsFixed(2)}\n";
     text += "Items:\n";
     for (var item in bill.items) {
       text += "- ${item.itemName} x${item.quantity}\n";

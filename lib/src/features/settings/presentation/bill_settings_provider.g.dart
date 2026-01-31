@@ -6,6 +6,23 @@ part of 'bill_settings_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+String _$currencySymbolHash() => r'5bfee4fdc3115dffcf1dd0578bc810aa107f8765';
+
+/// See also [currencySymbol].
+@ProviderFor(currencySymbol)
+final currencySymbolProvider = AutoDisposeProvider<String>.internal(
+  currencySymbol,
+  name: r'currencySymbolProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$currencySymbolHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef CurrencySymbolRef = AutoDisposeProviderRef<String>;
 String _$billSettingsControllerHash() =>
     r'5210c8095d958e13279cb144037c00f7309e44f8';
 
