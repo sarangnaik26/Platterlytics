@@ -7,6 +7,7 @@ import 'package:printing/printing.dart';
 import '../../billing/data/bill_repository.dart';
 import '../../billing/domain/bill_model.dart';
 import '../../settings/presentation/bill_settings_provider.dart';
+import '../../settings/presentation/date_format_provider.dart';
 
 // Provider for History
 final billHistoryProvider = FutureProvider.autoDispose
@@ -75,7 +76,14 @@ class _BillHistoryPageState extends ConsumerState<BillHistoryPage> {
                 title: Text(
                   "Total: $symbol${bill.totalPrice.toStringAsFixed(2)}",
                 ),
-                subtitle: Text("${bill.date} ${bill.time}"),
+                subtitle: Consumer(
+                  builder: (context, ref, _) {
+                    final formatDate = ref.watch(formatDateProvider);
+                    final bDate =
+                        DateTime.tryParse(bill.date) ?? DateTime.now();
+                    return Text("${formatDate(bDate)} ${bill.time}");
+                  },
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   Navigator.push(
@@ -109,14 +117,23 @@ class BillDetailsPage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.print),
-            onPressed: () => _printBill(bill, symbol),
+            onPressed: () {
+              final formatDate = ref.read(formatDateProvider);
+              _printBill(bill, symbol, formatDate);
+            },
           ),
         ],
       ),
       body: Column(
         children: [
           ListTile(
-            title: Text("Date: ${bill.date}"),
+            title: Consumer(
+              builder: (context, ref, _) {
+                final formatDate = ref.watch(formatDateProvider);
+                final bDate = DateTime.tryParse(bill.date) ?? DateTime.now();
+                return Text("Date: ${formatDate(bDate)}");
+              },
+            ),
             subtitle: Text("Time: ${bill.time}"),
             trailing: Text(
               "Total: $symbol${bill.totalPrice.toStringAsFixed(2)}",
@@ -147,7 +164,11 @@ class BillDetailsPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _printBill(Bill bill, String symbol) async {
+  Future<void> _printBill(
+    Bill bill,
+    String symbol,
+    String Function(DateTime) formatDate,
+  ) async {
     final doc = pw.Document();
 
     doc.addPage(
@@ -168,7 +189,9 @@ class BillDetailsPage extends ConsumerWidget {
               ),
               pw.Divider(),
               pw.Text("Bill #${bill.billId}"),
-              pw.Text("Date: ${bill.date} ${bill.time}"),
+              pw.Text(
+                "Date: ${formatDate(DateTime.tryParse(bill.date) ?? DateTime.now())} ${bill.time}",
+              ),
               pw.Divider(),
               ...bill.items.map(
                 (item) => pw.Row(

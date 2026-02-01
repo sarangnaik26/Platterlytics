@@ -6,7 +6,7 @@ part of 'bill_settings_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$formatCurrencyHash() => r'07623313050f1908abd999eb9885bcda3feea32c';
+String _$formatCurrencyHash() => r'd93e29322f3341017c4c5b9c93e116c6cc7cb10d';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -144,7 +144,7 @@ class _FormatCurrencyProviderElement extends AutoDisposeProviderElement<String>
   double get amount => (origin as FormatCurrencyProvider).amount;
 }
 
-String _$currencySymbolHash() => r'117f8c092875d2814332c74b3925fa99bb27bc92';
+String _$currencySymbolHash() => r'6b385779242480fa1196f98d8e52d88f9704eaf4';
 
 /// See also [currencySymbol].
 @ProviderFor(currencySymbol)

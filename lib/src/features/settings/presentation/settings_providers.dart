@@ -118,3 +118,33 @@ class CacheService extends _$CacheService {
     }
   }
 }
+
+@riverpod
+class AnalyticsSettingsController extends _$AnalyticsSettingsController {
+  @override
+  Future<int> build() async {
+    final repo = await ref.watch(settingsRepositoryProvider.future);
+    return repo.getWeekdayAnalysisWindow();
+  }
+
+  Future<void> setWindow(int weeks) async {
+    final repo = await ref.read(settingsRepositoryProvider.future);
+    await repo.setWeekdayAnalysisWindow(weeks);
+    state = AsyncValue.data(weeks);
+  }
+}
+
+@riverpod
+class DateFormatController extends _$DateFormatController {
+  @override
+  Future<String> build() async {
+    final repo = await ref.watch(settingsRepositoryProvider.future);
+    return repo.getDateFormat();
+  }
+
+  Future<void> setDateFormat(String format) async {
+    final repo = await ref.read(settingsRepositoryProvider.future);
+    await repo.setDateFormat(format);
+    state = AsyncValue.data(format);
+  }
+}

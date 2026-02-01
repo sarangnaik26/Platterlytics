@@ -40,3 +40,24 @@ Future<Map<String, dynamic>> itemRangeStats(
   final repo = ref.watch(analyticsRepositoryProvider);
   return repo.getItemRangeStats(menuId, startDate, endDate);
 }
+
+@riverpod
+Future<Map<String, dynamic>> weekdayStats(
+  Ref ref,
+  int weeksBack,
+  int weekday,
+) async {
+  final repo = ref.watch(analyticsRepositoryProvider);
+  return repo.getWeekdaySalesStats(weeksBack, weekday);
+}
+
+@riverpod
+Future<Map<String, dynamic>> itemWeekdayStats(
+  Ref ref,
+  int menuId,
+  int weeksBack,
+  int weekday,
+) async {
+  final repo = ref.watch(analyticsRepositoryProvider);
+  return repo.getItemWeekdayStats(menuId, weeksBack, weekday);
+}

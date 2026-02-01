@@ -55,6 +55,90 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const Divider(),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              "Date Format",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            child: Consumer(
+              builder: (context, ref, child) {
+                final formatAsync = ref.watch(dateFormatControllerProvider);
+                return formatAsync.when(
+                  data: (currentFormat) => SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 'dd/MM/yyyy',
+                        label: Text("DD/MM/YYYY"),
+                      ),
+                      ButtonSegment(
+                        value: 'yyyy/MM/dd',
+                        label: Text("YYYY/MM/DD"),
+                      ),
+                    ],
+                    selected: {currentFormat},
+                    onSelectionChanged: (Set<String> newSelection) {
+                      ref
+                          .read(dateFormatControllerProvider.notifier)
+                          .setDateFormat(newSelection.first);
+                    },
+                  ),
+                  loading: () => const CircularProgressIndicator(),
+                  error: (e, s) => Text("Error: $e"),
+                );
+              },
+            ),
+          ),
+          const Divider(),
+
+          // Analytics Settings
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              "Analytics",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Consumer(
+            builder: (context, ref, child) {
+              final windowAsync = ref.watch(
+                analyticsSettingsControllerProvider,
+              );
+              return windowAsync.when(
+                data: (weeks) => ListTile(
+                  title: const Text("Weekday Analysis Window"),
+                  subtitle: Text("Calculate stats based on last $weeks weeks"),
+                  trailing: DropdownButton<int>(
+                    value: weeks,
+                    items: const [
+                      DropdownMenuItem(value: 4, child: Text("4 Weeks")),
+                      DropdownMenuItem(value: 6, child: Text("6 Weeks")),
+                      DropdownMenuItem(value: 8, child: Text("8 Weeks")),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        ref
+                            .read(analyticsSettingsControllerProvider.notifier)
+                            .setWindow(val);
+                      }
+                    },
+                  ),
+                ),
+                loading: () => const SizedBox(
+                  height: 50,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, s) => Text("Error: $e"),
+              );
+            },
+          ),
+          const Divider(),
 
           // Cache Settings
           const Padding(

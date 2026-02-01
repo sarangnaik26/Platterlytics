@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../domain/bill_model.dart';
 import '../../settings/presentation/bill_settings_provider.dart';
 import '../../settings/domain/bill_settings_model.dart';
+import '../../settings/presentation/date_format_provider.dart';
 
 class BillSuccessView extends ConsumerStatefulWidget {
   final Bill bill;
@@ -28,7 +29,9 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
       text += "\n";
     }
     text += "Bill #${bill.billId}\n";
-    text += "Date: ${bill.date} ${bill.time}\n";
+    final formatDate = ref.read(formatDateProvider);
+    final bDate = DateTime.tryParse(bill.date) ?? DateTime.now();
+    text += "Date: ${formatDate(bDate)} ${bill.time}\n";
     text += "--------------------------------\n";
     for (var item in bill.items) {
       final formattedPrice = settings.currencyAtEnd
@@ -128,9 +131,17 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
                           color: Colors.black,
                         ),
                       ),
-                      Text(
-                        "Date: ${widget.bill.date} ${widget.bill.time}",
-                        style: const TextStyle(color: Colors.black),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final formatDate = ref.watch(formatDateProvider);
+                          final bDate =
+                              DateTime.tryParse(widget.bill.date) ??
+                              DateTime.now();
+                          return Text(
+                            "Date: ${formatDate(bDate)} ${widget.bill.time}",
+                            style: const TextStyle(color: Colors.black),
+                          );
+                        },
                       ),
                       const Divider(height: 24),
                       ...widget.bill.items.map(
@@ -276,6 +287,9 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
       text += "${settings.businessName}\n";
     }
     text += "Bill ID: ${bill.billId}\n";
+    final formatDate = ref.read(formatDateProvider);
+    final bDate = DateTime.tryParse(bill.date) ?? DateTime.now();
+    text += "Date: ${formatDate(bDate)} ${bill.time}\n";
     final formattedTotal = settings.currencyAtEnd
         ? "${bill.totalPrice.toStringAsFixed(2)} ${settings.currencySymbol}"
         : "${settings.currencySymbol} ${bill.totalPrice.toStringAsFixed(2)}";

@@ -25,11 +25,31 @@ class SettingsRepository {
     return _prefs.getString(_autoCacheFreqKey) ?? 'never';
   }
 
+  static const _weekdayAnalysisWindowKey = 'weekday_analysis_window';
+
+  static const _dateFormatKey = 'date_format';
+
   Future<void> setAutoCacheDays(int days) async {
     await _prefs.setInt(_autoCacheDaysKey, days);
   }
 
   int getAutoCacheDays() {
     return _prefs.getInt(_autoCacheDaysKey) ?? 7;
+  }
+
+  Future<void> setWeekdayAnalysisWindow(int weeks) async {
+    await _prefs.setInt(_weekdayAnalysisWindowKey, weeks);
+  }
+
+  int getWeekdayAnalysisWindow() {
+    return _prefs.getInt(_weekdayAnalysisWindowKey) ?? 4;
+  }
+
+  Future<void> setDateFormat(String format) async {
+    await _prefs.setString(_dateFormatKey, format);
+  }
+
+  String getDateFormat() {
+    return _prefs.getString(_dateFormatKey) ?? 'dd/MM/yyyy';
   }
 }

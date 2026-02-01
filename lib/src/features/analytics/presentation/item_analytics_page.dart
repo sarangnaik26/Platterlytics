@@ -8,6 +8,10 @@ import '../../menu/domain/menu_item.dart';
 import '../../menu/presentation/menu_providers.dart';
 import 'analytics_providers.dart';
 import '../../settings/presentation/bill_settings_provider.dart';
+import '../../settings/presentation/settings_providers.dart';
+import '../../settings/presentation/date_format_provider.dart';
+
+enum ItemAnalyticsMode { daily, range, weekday }
 
 class ItemAnalyticsPage extends ConsumerStatefulWidget {
   const ItemAnalyticsPage({super.key});
@@ -250,9 +254,10 @@ class _ItemAnalysisModal extends ConsumerStatefulWidget {
 }
 
 class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
-  bool isRangeMode = true;
+  ItemAnalyticsMode _selectedMode = ItemAnalyticsMode.range;
   DateTime selectedDate = DateTime.now();
   DateTimeRange? selectedRange;
+  int _selectedWeekday = DateTime.now().weekday;
 
   @override
   void initState() {
@@ -266,20 +271,43 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('yyyy-MM-dd');
-    final formattedDate = dateFormat.format(selectedDate);
-    final formattedStart = dateFormat.format(selectedRange!.start);
-    final formattedEnd = dateFormat.format(selectedRange!.end);
+    final formatDate = ref.watch(formatDateProvider);
+    final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
+    final formattedStart = DateFormat(
+      'yyyy-MM-dd',
+    ).format(selectedRange!.start);
+    final formattedEnd = DateFormat('yyyy-MM-dd').format(selectedRange!.end);
 
-    final statsAsync = isRangeMode
-        ? ref.watch(
-            itemRangeStatsProvider(
-              widget.item.menuId!,
-              formattedStart,
-              formattedEnd,
-            ),
-          )
-        : ref.watch(itemDailyStatsProvider(widget.item.menuId!, formattedDate));
+    final settingsAsync = ref.watch(analyticsSettingsControllerProvider);
+    final int weeksBack = settingsAsync.value ?? 4;
+
+    AsyncValue<Map<String, dynamic>>? statsAsync;
+
+    switch (_selectedMode) {
+      case ItemAnalyticsMode.daily:
+        statsAsync = ref.watch(
+          itemDailyStatsProvider(widget.item.menuId!, formattedDate),
+        );
+        break;
+      case ItemAnalyticsMode.range:
+        statsAsync = ref.watch(
+          itemRangeStatsProvider(
+            widget.item.menuId!,
+            formattedStart,
+            formattedEnd,
+          ),
+        );
+        break;
+      case ItemAnalyticsMode.weekday:
+        statsAsync = ref.watch(
+          itemWeekdayStatsProvider(
+            widget.item.menuId!,
+            weeksBack,
+            _selectedWeekday,
+          ),
+        );
+        break;
+    }
 
     return DraggableScrollableSheet(
       expand: false,
@@ -302,37 +330,83 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
               ),
               const SizedBox(height: 16),
               // Controls
-              Row(
+              Column(
                 children: [
-                  Expanded(
-                    child: SegmentedButton<bool>(
-                      segments: const [
-                        ButtonSegment(value: false, label: Text("Daily")),
-                        ButtonSegment(value: true, label: Text("Range")),
-                      ],
-                      selected: {isRangeMode},
-                      onSelectionChanged: (Set<bool> newSelection) {
-                        setState(() {
-                          isRangeMode = newSelection.first;
-                        });
-                      },
-                    ),
+                  SegmentedButton<ItemAnalyticsMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: ItemAnalyticsMode.daily,
+                        label: Text("Daily"),
+                      ),
+                      ButtonSegment(
+                        value: ItemAnalyticsMode.range,
+                        label: Text("Range"),
+                      ),
+                      ButtonSegment(
+                        value: ItemAnalyticsMode.weekday,
+                        label: Text("Weekday"),
+                      ),
+                    ],
+                    selected: {_selectedMode},
+                    onSelectionChanged: (Set<ItemAnalyticsMode> newSelection) {
+                      setState(() {
+                        _selectedMode = newSelection.first;
+                      });
+                    },
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.calendar_today),
-                    onPressed: () async {
-                      if (isRangeMode) {
-                        final picked = await showDateRangePicker(
-                          context: context,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now(),
-                          initialDateRange: selectedRange,
-                        );
-                        if (picked != null) {
-                          setState(() => selectedRange = picked);
-                        }
-                      } else {
+                  if (_selectedMode == ItemAnalyticsMode.weekday) ...[
+                    const SizedBox(height: 16),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(7, (index) {
+                          final dayIndex = index + 1;
+                          final isSelected = _selectedWeekday == dayIndex;
+                          const days = [
+                            "Mon",
+                            "Tue",
+                            "Wed",
+                            "Thu",
+                            "Fri",
+                            "Sat",
+                            "Sun",
+                          ];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4.0,
+                            ),
+                            child: ChoiceChip(
+                              label: Text(days[index]),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() {
+                                    _selectedWeekday = dayIndex;
+                                  });
+                                }
+                              },
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+
+              const SizedBox(height: 8),
+              if (_selectedMode == ItemAnalyticsMode.daily)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      formatDate(selectedDate),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
                           firstDate: DateTime(2020),
@@ -342,154 +416,61 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
                         if (picked != null) {
                           setState(() => selectedDate = picked);
                         }
-                      }
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (isRangeMode) ...[
+                      },
+                    ),
+                  ],
+                ),
+              if (_selectedMode == ItemAnalyticsMode.range) ...[
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {
                           final now = DateTime.now();
-                          // Start of week (Monday)
-                          final start = now.subtract(
-                            Duration(days: now.weekday - 1),
-                          );
                           setState(() {
                             selectedRange = DateTimeRange(
-                              start: start,
+                              start: now.subtract(const Duration(days: 6)),
                               end: now,
                             );
                           });
                         },
-                        child: const Text("This Week"),
+                        child: const Text("Last 7 Days"),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          final now = DateTime.now();
-                          final start = DateTime(now.year, now.month, 1);
-                          setState(() {
-                            selectedRange = DateTimeRange(
-                              start: start,
-                              end: now,
-                            );
-                          });
-                        },
-                        child: const Text("This Month"),
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: () async {
+                        final picked = await showDateRangePicker(
+                          context: context,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                          initialDateRange: selectedRange,
+                        );
+                        if (picked != null) {
+                          setState(() => selectedRange = picked);
+                        }
+                      },
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    "${formatDate(selectedRange!.start)} - ${formatDate(selectedRange!.end)}",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
               ],
-
               const SizedBox(height: 16),
 
-              statsAsync.when(
+              statsAsync!.when(
                 data: (data) {
-                  final totalSales = data['totalSales'] as double;
-                  final totalQty = data['totalQty'] as int;
-                  final chartData = isRangeMode
-                      ? data['dailyData'] as List<Map<String, dynamic>>
-                      : data['hourlyData'] as List<Map<String, dynamic>>;
-
-                  return Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Consumer(
-                              builder: (context, ref, child) {
-                                return _MetricCard(
-                                  "Sales",
-                                  ref.watch(formatCurrencyProvider(totalSales)),
-                                  Colors.green,
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _MetricCard(
-                              "Quantity",
-                              totalQty.toString(),
-                              Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        height: 250,
-                        child: BarChart(
-                          BarChartData(
-                            titlesData: FlTitlesData(
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  getTitlesWidget: (value, meta) {
-                                    if (value.toInt() >= 0 &&
-                                        value.toInt() < chartData.length) {
-                                      final item = chartData[value.toInt()];
-                                      if (isRangeMode) {
-                                        // date
-                                        final d = DateTime.tryParse(
-                                          item['date'],
-                                        );
-                                        return Text(
-                                          DateFormat('MM-dd').format(d!),
-                                          style: const TextStyle(fontSize: 10),
-                                        );
-                                      } else {
-                                        return Text(
-                                          item['hour'],
-                                          style: const TextStyle(fontSize: 10),
-                                        );
-                                      }
-                                    }
-                                    return const Text('');
-                                  },
-                                ),
-                              ),
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              topTitles: AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              rightTitles: AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                            ),
-                            borderData: FlBorderData(show: false),
-                            gridData: FlGridData(show: false),
-                            barGroups: List.generate(chartData.length, (index) {
-                              final item = chartData[index];
-                              final qty =
-                                  (item['qty'] as num?)?.toDouble() ?? 0.0;
-                              return BarChartGroupData(
-                                x: index,
-                                barRods: [
-                                  BarChartRodData(
-                                    toY: qty,
-                                    color: AppColors.primary,
-                                    width: 16,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ],
-                              );
-                            }),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
+                  if (_selectedMode == ItemAnalyticsMode.weekday) {
+                    return _buildWeekdayContent(data, weeksBack);
+                  } else {
+                    return _buildStandardContent(data);
+                  }
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, s) => Text("Error: $e"),
@@ -498,6 +479,408 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildStandardContent(Map<String, dynamic> data) {
+    final totalSales = (data['totalSales'] as num).toDouble(); // mapped from DB
+    final totalQty = data['totalQty'] as int;
+    final chartData = _selectedMode == ItemAnalyticsMode.range
+        ? data['dailyData'] as List<Map<String, dynamic>>
+        : data['hourlyData'] as List<Map<String, dynamic>>;
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Consumer(
+                builder: (context, ref, child) {
+                  return _MetricCard(
+                    "Sales",
+                    ref.watch(formatCurrencyProvider(totalSales)),
+                    Colors.green,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _MetricCard("Quantity", totalQty.toString(), Colors.blue),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          height: 250,
+          child: BarChart(
+            BarChartData(
+              titlesData: FlTitlesData(
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      if (value.toInt() >= 0 &&
+                          value.toInt() < chartData.length) {
+                        final item = chartData[value.toInt()];
+                        if (_selectedMode == ItemAnalyticsMode.range) {
+                          final d = DateTime.tryParse(item['date']);
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Consumer(
+                              builder: (context, ref, _) {
+                                final formatDate = ref.watch(
+                                  formatDateProvider,
+                                );
+                                if (d == null) return const Text('');
+                                final formatted = formatDate(d);
+                                final parts = formatted.split('/');
+                                String displayLabel;
+                                if (parts.length >= 2) {
+                                  if (formatted.startsWith(RegExp(r'\d{4}'))) {
+                                    displayLabel = '${parts[1]}/${parts[2]}';
+                                  } else {
+                                    displayLabel = '${parts[0]}/${parts[1]}';
+                                  }
+                                } else {
+                                  displayLabel = formatted;
+                                }
+                                return Text(
+                                  displayLabel,
+                                  style: const TextStyle(fontSize: 10),
+                                );
+                              },
+                            ),
+                          );
+                        } else {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              item['hour'],
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                          );
+                        }
+                      }
+                      return const Text('');
+                    },
+                  ),
+                ),
+                leftTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              gridData: const FlGridData(show: false),
+              barGroups: List.generate(chartData.length, (index) {
+                final item = chartData[index];
+                final qty = (item['qty'] as num?)?.toDouble() ?? 0.0;
+                return BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: qty,
+                      color: AppColors.primary,
+                      width: 16,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ],
+                  showingTooltipIndicators: [0],
+                );
+              }),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWeekdayContent(Map<String, dynamic> data, int weeksBack) {
+    String getDayName(int w) {
+      switch (w) {
+        case 1:
+          return "Monday";
+        case 2:
+          return "Tuesday";
+        case 3:
+          return "Wednesday";
+        case 4:
+          return "Thursday";
+        case 5:
+          return "Friday";
+        case 6:
+          return "Saturday";
+        case 7:
+          return "Sunday";
+        default:
+          return "";
+      }
+    }
+
+    final avgQty = (data['avgQty'] as num).toDouble();
+    final latestSnapshot = data['latest'] as Map<String, dynamic>?;
+    final trend = data['trend'] as Map<String, dynamic>;
+    final contribution = (data['contribution'] as num).toDouble();
+    final history = data['history'] as List<dynamic>;
+    final peakDay = data['peakDay'] as String;
+
+    if (history.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.analytics_outlined, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              "No data available for this weekday.",
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final actualWeeks = data['totalWeeks'] ?? weeksBack;
+    return Column(
+      children: [
+        Text(
+          "${getDayName(_selectedWeekday)} Overview for ${widget.item.itemName}",
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        Text(
+          "Based on last $actualWeeks ${getDayName(_selectedWeekday)}s",
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+
+        Row(
+          children: [
+            Expanded(
+              child: _MetricCard(
+                "Avg Quantity",
+                avgQty.toStringAsFixed(1),
+                Colors.blue,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: _MetricCard("Peak Day", peakDay, Colors.orange)),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Trend
+        Row(
+          children: [
+            Expanded(
+              child: _TrendCard(
+                label: "Growth",
+                value:
+                    "${((trend['growth'] as double) * 100).toStringAsFixed(1)}%",
+                subLabel: "vs prev week",
+                color: (trend['growth'] as double) >= 0
+                    ? Colors.green
+                    : Colors.red,
+                icon: (trend['growth'] as double) >= 0
+                    ? Icons.trending_up
+                    : Icons.trending_down,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _TrendCard(
+                label: "Consistency",
+                value: trend['consistency'] as String,
+                subLabel: "stability",
+                color: Colors.blueGrey,
+                icon: Icons.show_chart,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Card(
+          color: const Color(0xFFFFF8E1),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
+              children: [
+                const Icon(Icons.lightbulb_outline, color: Colors.amber),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "On ${getDayName(_selectedWeekday)}s, this item contributes ${(contribution * 100).toStringAsFixed(1)}% of total sales",
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+        const Text(
+          "Selling Quantity History",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 200,
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              gridData: const FlGridData(show: false),
+              titlesData: FlTitlesData(
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      if (value.toInt() >= 0 &&
+                          value.toInt() < history.length) {
+                        final item = history[value.toInt()];
+                        final d = DateTime.tryParse(item['date']);
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Consumer(
+                            builder: (context, ref, _) {
+                              if (d == null) return const Text('');
+                              final formatDate = ref.watch(formatDateProvider);
+                              final formatted = formatDate(d);
+                              final parts = formatted.split('/');
+                              String displayLabel;
+                              if (parts.length >= 2) {
+                                if (formatted.startsWith(RegExp(r'\d{4}'))) {
+                                  displayLabel = '${parts[1]}/${parts[2]}';
+                                } else {
+                                  displayLabel = '${parts[0]}/${parts[1]}';
+                                }
+                              } else {
+                                displayLabel = formatted;
+                              }
+                              return Text(
+                                displayLabel,
+                                style: const TextStyle(fontSize: 10),
+                              );
+                            },
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
+                leftTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              barGroups: List.generate(history.length, (index) {
+                final item = history[index];
+                return BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: (item['qty'] as num).toDouble(),
+                      color: AppColors.primary,
+                      width: 16,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ],
+                  showingTooltipIndicators: [0],
+                );
+              }),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (latestSnapshot != null) ...[
+          const Text(
+            "Latest Co-Selling Items",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          if (latestSnapshot['coSelling'] != null)
+            ...(latestSnapshot['coSelling'] as List).map(
+              (i) => ListTile(
+                dense: true,
+                title: Text(i['item_name']),
+                trailing: Text("${i['frequency']} times"),
+                leading: const Icon(Icons.link, size: 16),
+              ),
+            ),
+          if ((latestSnapshot['coSelling'] as List).isEmpty)
+            const Text("No co-selling data."),
+        ],
+      ],
+    );
+  }
+}
+
+class _TrendCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final String subLabel;
+  final Color color;
+  final IconData icon;
+
+  const _TrendCard({
+    required this.label,
+    required this.value,
+    required this.subLabel,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            Text(
+              subLabel,
+              style: const TextStyle(fontSize: 10, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

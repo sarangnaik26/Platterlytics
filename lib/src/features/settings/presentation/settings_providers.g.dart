@@ -7,7 +7,7 @@ part of 'settings_providers.dart';
 // **************************************************************************
 
 String _$settingsRepositoryHash() =>
-    r'3e140b5b257d1f3a1068e99eaec080a9719b2c02';
+    r'9b87adf667d44c51ab91f1d3d35e851b915d42ed';
 
 /// See also [settingsRepository].
 @ProviderFor(settingsRepository)
@@ -77,5 +77,39 @@ final cacheServiceProvider =
     );
 
 typedef _$CacheService = AutoDisposeNotifier<void>;
+String _$analyticsSettingsControllerHash() =>
+    r'88be7969434f3515b25fc3319f131f2693ba922b';
+
+/// See also [AnalyticsSettingsController].
+@ProviderFor(AnalyticsSettingsController)
+final analyticsSettingsControllerProvider =
+    AutoDisposeAsyncNotifierProvider<AnalyticsSettingsController, int>.internal(
+      AnalyticsSettingsController.new,
+      name: r'analyticsSettingsControllerProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$analyticsSettingsControllerHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$AnalyticsSettingsController = AutoDisposeAsyncNotifier<int>;
+String _$dateFormatControllerHash() =>
+    r'2941d1f3388c007e6654c8bdffba2a1ec6a54c5c';
+
+/// See also [DateFormatController].
+@ProviderFor(DateFormatController)
+final dateFormatControllerProvider =
+    AutoDisposeAsyncNotifierProvider<DateFormatController, String>.internal(
+      DateFormatController.new,
+      name: r'dateFormatControllerProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$dateFormatControllerHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$DateFormatController = AutoDisposeAsyncNotifier<String>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
