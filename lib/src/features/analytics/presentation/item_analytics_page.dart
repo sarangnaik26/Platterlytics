@@ -76,7 +76,9 @@ class _ItemAnalyticsPageState extends ConsumerState<ItemAnalyticsPage> {
                         () =>
                             _selectedCategoryId = selected ? category.id : null,
                       ),
-                      selectedColor: Color(category.color).withOpacity(0.2),
+                      selectedColor: Color(
+                        category.color,
+                      ).withValues(alpha: 0.2),
                       labelStyle: TextStyle(
                         color: isSelected ? Color(category.color) : null,
                       ),
@@ -173,7 +175,7 @@ class _CategoryAnalyticsCard extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Color(category.color).withOpacity(0.1),
+              color: Color(category.color).withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -278,8 +280,6 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
             ),
           )
         : ref.watch(itemDailyStatsProvider(widget.item.menuId!, formattedDate));
-
-    final symbol = ref.watch(currencySymbolProvider);
 
     return DraggableScrollableSheet(
       expand: false,
@@ -404,10 +404,14 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
                       Row(
                         children: [
                           Expanded(
-                            child: _MetricCard(
-                              "Sales",
-                              "$symbol${totalSales.toStringAsFixed(2)}",
-                              Colors.green,
+                            child: Consumer(
+                              builder: (context, ref, child) {
+                                return _MetricCard(
+                                  "Sales",
+                                  ref.watch(formatCurrencyProvider(totalSales)),
+                                  Colors.green,
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -509,7 +513,7 @@ class _MetricCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color),
       ),
@@ -525,7 +529,7 @@ class _MetricCard extends StatelessWidget {
           ),
           Text(
             title,
-            style: TextStyle(fontSize: 14, color: color.withOpacity(0.8)),
+            style: TextStyle(fontSize: 14, color: color.withValues(alpha: 0.8)),
           ),
         ],
       ),

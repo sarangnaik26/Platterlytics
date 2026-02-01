@@ -2,7 +2,6 @@ import 'package:sqflite/sqflite.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/data/database_helper.dart';
 import '../domain/bill_model.dart';
-import 'package:intl/intl.dart';
 
 class BillRepository {
   final DatabaseHelper _dbHelper;

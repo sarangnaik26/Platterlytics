@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../settings/presentation/bill_settings_provider.dart';
 import 'package:intl/intl.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../menu/domain/category.dart';
 import '../../menu/domain/menu_item.dart';
 import '../../menu/presentation/menu_providers.dart';
@@ -27,7 +26,6 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
     final categoriesAsync = ref.watch(categoriesProvider);
     final cartTotalValue = ref.watch(cartTotalProvider);
     final cartItems = ref.watch(cartProvider);
-    final symbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text("New Bill")),
@@ -37,8 +35,9 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
           Expanded(
             child: categoriesAsync.when(
               data: (categories) {
-                if (categories.isEmpty)
+                if (categories.isEmpty) {
                   return const Center(child: Text("No Items"));
+                }
 
                 return Column(
                   children: [
@@ -84,7 +83,7 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
                             },
                             selectedColor: Color(
                               category.color,
-                            ).withOpacity(0.2), // Deprecated?
+                            ).withValues(alpha: 0.2),
                             labelStyle: TextStyle(
                               color: isSelected ? Color(category.color) : null,
                             ),
@@ -173,8 +172,13 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
                               }
                             }
                           },
-                    child: Text(
-                      "Done ($symbol${cartTotalValue.toStringAsFixed(2)})",
+                    child: Consumer(
+                      builder: (context, ref, child) {
+                        final formattedTotal = ref.watch(
+                          formatCurrencyProvider(cartTotalValue),
+                        );
+                        return Text("Done ($formattedTotal)");
+                      },
                     ),
                   ),
                 ),
@@ -251,7 +255,6 @@ class BillingCategoryCard extends ConsumerWidget {
     final menuItemsAsync = ref.watch(
       menuItemsProvider(categoryId: category.id),
     );
-    final symbol = ref.watch(currencySymbolProvider);
 
     return menuItemsAsync.when(
       data: (items) {
@@ -262,12 +265,14 @@ class BillingCategoryCard extends ConsumerWidget {
           );
         }).toList();
 
-        if (filteredItems.isEmpty && searchQuery.isNotEmpty)
+        if (filteredItems.isEmpty && searchQuery.isNotEmpty) {
           return const SizedBox.shrink();
+        }
 
         // Even if items is empty (e.g. empty category without search), we might want to hide it in billing to avoid clutter
-        if (items.isEmpty && searchQuery.isEmpty)
+        if (items.isEmpty && searchQuery.isEmpty) {
           return const SizedBox.shrink();
+        }
 
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
@@ -285,7 +290,7 @@ class BillingCategoryCard extends ConsumerWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Color(category.color).withOpacity(0.1),
+                  color: Color(category.color).withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -317,10 +322,19 @@ class BillingCategoryCard extends ConsumerWidget {
                       ),
                       child: const Icon(Icons.add),
                     ),
-                    subtitle: Text(
-                      item.prices
-                          .map((p) => "${p.unit}: $symbol${p.price}")
-                          .join(", "),
+                    subtitle: Consumer(
+                      builder: (context, ref, child) {
+                        return Text(
+                          item.prices
+                              .map((p) {
+                                final formatted = ref.watch(
+                                  formatCurrencyProvider(p.price),
+                                );
+                                return "${p.unit}: $formatted";
+                              })
+                              .join(", "),
+                        );
+                      },
                     ),
                   );
                 },
@@ -353,7 +367,7 @@ class BillingCategoryCard extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<MenuPrice>(
-                    value: selectedPrice,
+                    initialValue: selectedPrice,
                     decoration: const InputDecoration(labelText: "Unit"),
                     items: item.prices.map((p) {
                       return DropdownMenuItem(
@@ -414,7 +428,6 @@ class CartBottomSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cartItems = ref.watch(cartProvider);
-    final symbol = ref.watch(currencySymbolProvider);
 
     return Column(
       children: [
@@ -438,15 +451,29 @@ class CartBottomSheet extends ConsumerWidget {
                 final item = cartItems[index];
                 return ListTile(
                   title: Text(item.itemName),
-                  subtitle: Text(
-                    "${item.quantity} x ${item.unit} @ $symbol${item.price}",
+                  subtitle: Consumer(
+                    builder: (context, ref, child) {
+                      final formatted = ref.watch(
+                        formatCurrencyProvider(item.price),
+                      );
+                      return Text(
+                        "${item.quantity} x ${item.unit} @ $formatted",
+                      );
+                    },
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        "$symbol${item.totalItemPrice.toStringAsFixed(2)}",
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final formattedTotal = ref.watch(
+                            formatCurrencyProvider(item.totalItemPrice),
+                          );
+                          return Text(
+                            formattedTotal,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          );
+                        },
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),

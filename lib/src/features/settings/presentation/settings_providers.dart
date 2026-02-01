@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/settings_repository.dart';
@@ -7,7 +8,7 @@ import '../data/settings_repository.dart';
 part 'settings_providers.g.dart';
 
 @Riverpod(keepAlive: true)
-Future<SettingsRepository> settingsRepository(SettingsRepositoryRef ref) async {
+Future<SettingsRepository> settingsRepository(Ref ref) async {
   final prefs = await SharedPreferences.getInstance();
   return SettingsRepository(prefs);
 }

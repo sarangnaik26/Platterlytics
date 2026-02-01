@@ -61,7 +61,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     radius: 50,
                     backgroundColor: Theme.of(
                       context,
-                    ).primaryColor.withOpacity(0.2),
+                    ).primaryColor.withValues(alpha: 0.2),
                     child: Icon(
                       Icons.person,
                       size: 50,

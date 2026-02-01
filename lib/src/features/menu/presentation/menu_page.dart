@@ -86,7 +86,9 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                           _selectedCategoryId = selected ? category.id : null;
                         });
                       },
-                      selectedColor: Color(category.color).withOpacity(0.2),
+                      selectedColor: Color(
+                        category.color,
+                      ).withValues(alpha: 0.2),
                       labelStyle: TextStyle(
                         color: _selectedCategoryId == category.id
                             ? Color(category.color)
@@ -193,7 +195,6 @@ class CategoryCard extends ConsumerWidget {
     final menuItemsAsync = ref.watch(
       menuItemsProvider(categoryId: category.id),
     );
-    final symbol = ref.watch(currencySymbolProvider);
 
     return menuItemsAsync.when(
       data: (items) {
@@ -223,7 +224,7 @@ class CategoryCard extends ConsumerWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Color(category.color).withOpacity(0.1),
+                  color: Color(category.color).withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -305,16 +306,69 @@ class CategoryCard extends ConsumerWidget {
                     final item = filteredItems[index];
                     return ListTile(
                       title: Text(item.itemName),
-                      subtitle: Text(
-                        item.prices
-                            .map((p) => "${p.unit}: $symbol${p.price}")
-                            .join(", "),
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.more_vert),
-                        onPressed: () {
-                          // Edit/Delete Item
+                      subtitle: Consumer(
+                        builder: (context, ref, child) {
+                          return Text(
+                            item.prices
+                                .map((p) {
+                                  final formatted = ref.watch(
+                                    formatCurrencyProvider(p.price),
+                                  );
+                                  return "${p.unit}: $formatted";
+                                })
+                                .join(", "),
+                          );
                         },
+                      ),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            showDialog(
+                              context: context,
+                              builder: (_) => MenuItemDialog(
+                                categoryId: category.id!,
+                                itemToEdit: item,
+                              ),
+                            );
+                          } else if (value == 'delete') {
+                            showConfirmDialog(
+                              context: context,
+                              title: "Delete Item",
+                              content:
+                                  "Are you sure you want to delete '${item.itemName}'?",
+                              onConfirm: () {
+                                ref
+                                    .read(menuControllerProvider.notifier)
+                                    .deleteMenuItem(item.menuId!);
+                              },
+                            );
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit, size: 20),
+                                SizedBox(width: 8),
+                                Text("Edit"),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete, size: 20, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Delete",
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -351,7 +405,7 @@ class AddCategoryDialog extends ConsumerStatefulWidget {
 
 class _AddCategoryDialogState extends ConsumerState<AddCategoryDialog> {
   final _nameController = TextEditingController();
-  Color _selectedColor = AppColors.primary;
+  final Color _selectedColor = AppColors.primary;
 
   @override
   Widget build(BuildContext context) {
@@ -381,7 +435,7 @@ class _AddCategoryDialogState extends ConsumerState<AddCategoryDialog> {
                   .add(
                     Category(
                       name: name,
-                      color: _selectedColor.value,
+                      color: _selectedColor.toARGB32(),
                       priority: 1,
                     ),
                   );
@@ -485,23 +539,28 @@ class _MenuItemDialogState extends ConsumerState<MenuItemDialog> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 2,
+                      flex: 3,
                       child: DropdownButtonFormField<String>(
-                        value: data['unit'],
+                        initialValue: data['unit'],
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: "Unit",
                           contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 0,
+                            horizontal: 8,
+                            vertical: 8,
                           ),
                           border: OutlineInputBorder(),
                         ),
                         items: _unitOptions.map((unit) {
                           return DropdownMenuItem(
                             value: unit,
-                            child: Text(unit),
+                            child: Text(
+                              unit,
+                              style: const TextStyle(fontSize: 13),
+                            ),
                           );
                         }).toList(),
                         onChanged: (value) {
@@ -515,25 +574,31 @@ class _MenuItemDialogState extends ConsumerState<MenuItemDialog> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      flex: 2,
+                      flex: 4,
                       child: TextField(
                         controller: data['priceController'],
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           labelText: "Price",
                           prefixText: "${ref.watch(currencySymbolProvider)} ",
+                          prefixStyle: const TextStyle(fontSize: 13),
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 0,
+                            horizontal: 8,
+                            vertical: 12,
                           ),
                           border: const OutlineInputBorder(),
                         ),
+                        style: const TextStyle(fontSize: 14),
                       ),
                     ),
+                    const SizedBox(width: 4),
                     IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                       icon: const Icon(
                         Icons.remove_circle_outline,
                         color: Colors.red,
+                        size: 22,
                       ),
                       onPressed: _priceEntries.length > 1
                           ? () => _removePriceEntry(index)
@@ -602,52 +667,6 @@ class _MenuItemDialogState extends ConsumerState<MenuItemDialog> {
   }
 }
 
-class RenameItemDialog extends ConsumerStatefulWidget {
-  final MenuItem item;
-  const RenameItemDialog({super.key, required this.item});
-
-  @override
-  ConsumerState<RenameItemDialog> createState() => _RenameItemDialogState();
-}
-
-class _RenameItemDialogState extends ConsumerState<RenameItemDialog> {
-  late TextEditingController _nameController;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.item.itemName);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text("Rename Item"),
-      content: TextField(
-        controller: _nameController,
-        decoration: const InputDecoration(labelText: "Item Name"),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            final name = _nameController.text;
-            if (name.isNotEmpty) {
-              final updated = widget.item.copyWith(itemName: name);
-              ref.read(menuControllerProvider.notifier).updateMenuItem(updated);
-              Navigator.pop(context);
-            }
-          },
-          child: const Text("Save"),
-        ),
-      ],
-    );
-  }
-}
-
 class RenameCategoryDialog extends ConsumerStatefulWidget {
   final Category category;
   const RenameCategoryDialog({super.key, required this.category});
@@ -688,7 +707,7 @@ class _RenameCategoryDialogState extends ConsumerState<RenameCategoryDialog> {
               final updated = Category(
                 id: widget.category.id,
                 name: name,
-                color: _selectedColor.value,
+                color: _selectedColor.toARGB32(),
                 priority: widget.category.priority,
               );
               ref.read(categoriesProvider.notifier).updateCategory(updated);
@@ -700,4 +719,33 @@ class _RenameCategoryDialogState extends ConsumerState<RenameCategoryDialog> {
       ],
     );
   }
+}
+
+void showConfirmDialog({
+  required BuildContext context,
+  required String title,
+  required String content,
+  required VoidCallback onConfirm,
+}) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(content),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          onPressed: () {
+            onConfirm();
+            Navigator.pop(context);
+          },
+          child: const Text("Delete", style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
 }

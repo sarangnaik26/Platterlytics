@@ -22,6 +22,7 @@ class _BillSettingsPageState extends ConsumerState<BillSettingsPage> {
   bool _showContactInfo = true;
   bool _showFooterNote = true;
   bool _showOnBill = true;
+  bool _currencyAtEnd = true;
   bool _isInit = false;
 
   final List<Map<String, String>> _asianCurrencies = [
@@ -71,6 +72,7 @@ class _BillSettingsPageState extends ConsumerState<BillSettingsPage> {
       _showContactInfo = settings.showContactInfo;
       _showFooterNote = settings.showFooterNote;
       _showOnBill = settings.showOnBill;
+      _currencyAtEnd = settings.currencyAtEnd;
       _isInit = true;
     }
   }
@@ -95,7 +97,7 @@ class _BillSettingsPageState extends ConsumerState<BillSettingsPage> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value:
+                  initialValue:
                       _asianCurrencies.any(
                         (c) => c['symbol'] == _selectedCurrency,
                       )
@@ -115,6 +117,32 @@ class _BillSettingsPageState extends ConsumerState<BillSettingsPage> {
                   }).toList(),
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedCurrency = val);
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "Currency Position",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(
+                      value: false,
+                      label: Text(r"Prefix ($ 100)"),
+                      icon: Icon(Icons.keyboard_arrow_left),
+                    ),
+                    ButtonSegment(
+                      value: true,
+                      label: Text(r"Suffix (100 $)"),
+                      icon: Icon(Icons.keyboard_arrow_right),
+                    ),
+                  ],
+                  selected: {_currencyAtEnd},
+                  onSelectionChanged: (Set<bool> newSelection) {
+                    setState(() {
+                      _currencyAtEnd = newSelection.first;
+                    });
                   },
                 ),
                 const SizedBox(height: 24),
@@ -182,6 +210,7 @@ class _BillSettingsPageState extends ConsumerState<BillSettingsPage> {
                         showContactInfo: _showContactInfo,
                         showFooterNote: _showFooterNote,
                         showOnBill: _showOnBill,
+                        currencyAtEnd: _currencyAtEnd,
                       );
                       ref
                           .read(billSettingsControllerProvider.notifier)

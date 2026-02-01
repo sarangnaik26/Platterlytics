@@ -9,6 +9,7 @@ class BillSettings {
   final bool showContactInfo;
   final bool showFooterNote;
   final bool showOnBill;
+  final bool currencyAtEnd;
 
   BillSettings({
     this.businessName = '',
@@ -21,6 +22,7 @@ class BillSettings {
     this.showContactInfo = true,
     this.showFooterNote = true,
     this.showOnBill = true,
+    this.currencyAtEnd = true,
   });
 
   BillSettings copyWith({
@@ -34,6 +36,7 @@ class BillSettings {
     bool? showContactInfo,
     bool? showFooterNote,
     bool? showOnBill,
+    bool? currencyAtEnd,
   }) {
     return BillSettings(
       businessName: businessName ?? this.businessName,
@@ -46,6 +49,7 @@ class BillSettings {
       showContactInfo: showContactInfo ?? this.showContactInfo,
       showFooterNote: showFooterNote ?? this.showFooterNote,
       showOnBill: showOnBill ?? this.showOnBill,
+      currencyAtEnd: currencyAtEnd ?? this.currencyAtEnd,
     );
   }
 
@@ -61,6 +65,7 @@ class BillSettings {
       'showContactInfo': showContactInfo,
       'showFooterNote': showFooterNote,
       'showOnBill': showOnBill,
+      'currencyAtEnd': currencyAtEnd,
     };
   }
 
@@ -76,6 +81,7 @@ class BillSettings {
       showContactInfo: map['showContactInfo'] ?? true,
       showFooterNote: map['showFooterNote'] ?? true,
       showOnBill: map['showOnBill'] ?? true,
+      currencyAtEnd: map['currencyAtEnd'] ?? true,
     );
   }
 }

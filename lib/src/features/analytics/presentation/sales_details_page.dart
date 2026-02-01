@@ -39,8 +39,6 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
         ? ref.watch(rangeStatsProvider(formattedStart, formattedEnd))
         : ref.watch(dailyStatsProvider(formattedDate));
 
-    final symbol = ref.watch(currencySymbolProvider);
-
     return Scaffold(
       appBar: AppBar(title: const Text("Sales Details")),
       body: Column(
@@ -178,18 +176,26 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
                     // Metrics
                     Row(
                       children: [
-                        _MetricCard(
-                          "Total Sales",
-                          "$symbol${totalSales.toStringAsFixed(2)}",
-                          Colors.green,
+                        Consumer(
+                          builder: (context, ref, child) {
+                            return _MetricCard(
+                              "Total Sales",
+                              ref.watch(formatCurrencyProvider(totalSales)),
+                              Colors.green,
+                            );
+                          },
                         ),
                         const SizedBox(width: 8),
                         _MetricCard("Bills", billCount.toString(), Colors.blue),
                         const SizedBox(width: 8),
-                        _MetricCard(
-                          "Avg Bill",
-                          "$symbol${avgBill.toStringAsFixed(2)}",
-                          Colors.orange,
+                        Consumer(
+                          builder: (context, ref, child) {
+                            return _MetricCard(
+                              "Avg Bill",
+                              ref.watch(formatCurrencyProvider(avgBill)),
+                              Colors.orange,
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -299,7 +305,7 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
                     const SizedBox(height: 24),
                     // High/Low Analysis
                     if (chartData.isNotEmpty) ...[
-                      _buildAnalysisSection(chartData, symbol, isRangeMode),
+                      _buildAnalysisSection(chartData, isRangeMode),
                       const SizedBox(height: 24),
                     ],
                   ],
@@ -314,11 +320,7 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
     );
   }
 
-  Widget _buildAnalysisSection(
-    List<Map<String, dynamic>> data,
-    String symbol,
-    bool isRange,
-  ) {
+  Widget _buildAnalysisSection(List<Map<String, dynamic>> data, bool isRange) {
     if (data.isEmpty) return const SizedBox.shrink();
 
     // Find High and Low
@@ -365,12 +367,20 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        "$symbol${(highest['sales'] as num).toStringAsFixed(2)}",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          return Text(
+                            ref.watch(
+                              formatCurrencyProvider(
+                                (highest['sales'] as num).toDouble(),
+                              ),
+                            ),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        },
                       ),
                       Text(
                         getLabel(highest),
@@ -394,12 +404,20 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        "$symbol${(lowest['sales'] as num).toStringAsFixed(2)}",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          return Text(
+                            ref.watch(
+                              formatCurrencyProvider(
+                                (lowest['sales'] as num).toDouble(),
+                              ),
+                            ),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        },
                       ),
                       Text(
                         getLabel(lowest),
@@ -430,7 +448,7 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Card(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -450,7 +468,10 @@ class _MetricCard extends StatelessWidget {
               ),
               Text(
                 title,
-                style: TextStyle(fontSize: 12, color: color.withOpacity(0.8)),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: color.withValues(alpha: 0.8),
+                ),
               ),
             ],
           ),

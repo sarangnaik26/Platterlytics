@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../domain/bill_model.dart';
 import '../../menu/domain/menu_item.dart';
@@ -93,7 +94,7 @@ class Cart extends _$Cart {
 }
 
 @riverpod
-double cartTotal(CartTotalRef ref) {
+double cartTotal(Ref ref) {
   final cart = ref.watch(cartProvider);
   return cart.fold(0.0, (sum, item) => sum + item.totalItemPrice);
 }

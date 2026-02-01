@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:screenshot/screenshot.dart';
-import 'dart:typed_data';
-import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../domain/bill_model.dart';
 import '../../settings/presentation/bill_settings_provider.dart';
@@ -33,16 +31,22 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
     text += "Date: ${bill.date} ${bill.time}\n";
     text += "--------------------------------\n";
     for (var item in bill.items) {
+      final formattedPrice = settings.currencyAtEnd
+          ? "${item.totalItemPrice.toStringAsFixed(2)} ${settings.currencySymbol}"
+          : "${settings.currencySymbol} ${item.totalItemPrice.toStringAsFixed(2)}";
       text +=
-          "${item.itemName} (${item.quantity} x ${item.unit}) : ${settings.currencySymbol}${item.totalItemPrice.toStringAsFixed(2)}\n";
+          "${item.itemName} (${item.quantity} x ${item.unit}) : $formattedPrice\n";
     }
     text += "--------------------------------\n";
-    text +=
-        "Total: ${settings.currencySymbol}${bill.totalPrice.toStringAsFixed(2)}\n";
+    final formattedTotal = settings.currencyAtEnd
+        ? "${bill.totalPrice.toStringAsFixed(2)} ${settings.currencySymbol}"
+        : "${settings.currencySymbol} ${bill.totalPrice.toStringAsFixed(2)}";
+    text += "Total: $formattedTotal\n";
     if (settings.showOnBill && settings.showFooterNote) {
       text += "\n${settings.footerNote}";
     }
 
+    // ignore: deprecated_member_use
     Share.share(text);
   }
 
@@ -50,6 +54,7 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
     final directory = (await getApplicationDocumentsDirectory()).path;
     final imagePath = await _screenshotController.captureAndSave(directory);
     if (imagePath != null) {
+      // ignore: deprecated_member_use
       await Share.shareXFiles([
         XFile(imagePath),
       ], text: 'Bill from Platterlytics');
@@ -140,9 +145,17 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
                                   style: const TextStyle(color: Colors.black),
                                 ),
                               ),
-                              Text(
-                                "${settings.currencySymbol}${item.totalItemPrice.toStringAsFixed(2)}",
-                                style: const TextStyle(color: Colors.black),
+                              Consumer(
+                                builder: (context, ref, child) {
+                                  return Text(
+                                    ref.watch(
+                                      formatCurrencyProvider(
+                                        item.totalItemPrice,
+                                      ),
+                                    ),
+                                    style: const TextStyle(color: Colors.black),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -160,13 +173,21 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
                               color: Colors.black,
                             ),
                           ),
-                          Text(
-                            "${settings.currencySymbol}${widget.bill.totalPrice.toStringAsFixed(2)}",
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
+                          Consumer(
+                            builder: (context, ref, child) {
+                              return Text(
+                                ref.watch(
+                                  formatCurrencyProvider(
+                                    widget.bill.totalPrice,
+                                  ),
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -255,8 +276,10 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
       text += "${settings.businessName}\n";
     }
     text += "Bill ID: ${bill.billId}\n";
-    text +=
-        "Total: ${settings.currencySymbol}${bill.totalPrice.toStringAsFixed(2)}\n";
+    final formattedTotal = settings.currencyAtEnd
+        ? "${bill.totalPrice.toStringAsFixed(2)} ${settings.currencySymbol}"
+        : "${settings.currencySymbol} ${bill.totalPrice.toStringAsFixed(2)}";
+    text += "Total: $formattedTotal\n";
     text += "Items:\n";
     for (var item in bill.items) {
       text += "- ${item.itemName} x${item.quantity}\n";
