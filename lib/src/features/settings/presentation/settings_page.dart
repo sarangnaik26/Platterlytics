@@ -299,9 +299,8 @@ class SettingsPage extends ConsumerWidget {
             title: const Text("Privacy Policy"),
             subtitle: const Text("Read our privacy policy"),
             onTap: () async {
-              // TODO: Replace with the actual hosted URL of the privacy policy
               final Uri url = Uri.parse(
-                'https://github.com/sarangnaik26/Platterlytics/blob/main/docs/index.html',
+                'https://sarangnaik26.github.io/Platterlytics/',
               );
               try {
                 if (!await launchUrl(url)) {

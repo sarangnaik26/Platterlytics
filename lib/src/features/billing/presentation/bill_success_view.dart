@@ -291,10 +291,10 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
         text += "${settings.businessName.toUpperCase()}\n";
       }
       if (settings.showAddress && settings.address.isNotEmpty) {
-        text += "${settings.address}\n";
+        text += "Address: ${settings.address}\n";
       }
       if (settings.showContactInfo && settings.contactInfo.isNotEmpty) {
-        text += "${settings.contactInfo}\n";
+        text += "Contact: ${settings.contactInfo}\n";
       }
       if (text.isNotEmpty) text += "\n";
     }
