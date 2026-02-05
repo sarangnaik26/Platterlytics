@@ -336,15 +336,15 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
                     segments: const [
                       ButtonSegment(
                         value: ItemAnalyticsMode.daily,
-                        label: Text("Daily"),
+                        label: FittedBox(child: Text("Daily")),
                       ),
                       ButtonSegment(
                         value: ItemAnalyticsMode.range,
-                        label: Text("Range"),
+                        label: FittedBox(child: Text("Range")),
                       ),
                       ButtonSegment(
                         value: ItemAnalyticsMode.weekday,
-                        label: Text("Weekday"),
+                        label: FittedBox(child: Text("Weekday")),
                       ),
                     ],
                     selected: {_selectedMode},
@@ -576,6 +576,25 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
                   sideTitles: SideTitles(showTitles: false),
                 ),
               ),
+              barTouchData: BarTouchData(
+                enabled: false,
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (_) => Colors.transparent,
+                  tooltipPadding: EdgeInsets.zero,
+                  tooltipMargin: 2,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    if (rod.toY == 0) return null;
+                    return BarTooltipItem(
+                      rod.toY.toStringAsFixed(0),
+                      const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    );
+                  },
+                ),
+              ),
               borderData: FlBorderData(show: false),
               gridData: const FlGridData(show: false),
               barGroups: List.generate(chartData.length, (index) {
@@ -784,6 +803,25 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
                 ),
                 rightTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
+                ),
+              ),
+              barTouchData: BarTouchData(
+                enabled: false,
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (_) => Colors.transparent,
+                  tooltipPadding: EdgeInsets.zero,
+                  tooltipMargin: 2,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    if (rod.toY == 0) return null;
+                    return BarTooltipItem(
+                      rod.toY.toStringAsFixed(0),
+                      const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    );
+                  },
                 ),
               ),
               borderData: FlBorderData(show: false),

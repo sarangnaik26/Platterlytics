@@ -129,12 +129,18 @@ class _BillSettingsPageState extends ConsumerState<BillSettingsPage> {
                   segments: const [
                     ButtonSegment(
                       value: false,
-                      label: Text(r"Prefix ($ 100)"),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(r"Prefix ($ 100)"),
+                      ),
                       icon: Icon(Icons.keyboard_arrow_left),
                     ),
                     ButtonSegment(
                       value: true,
-                      label: Text(r"Suffix (100 $)"),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(r"Suffix (100 $)"),
+                      ),
                       icon: Icon(Icons.keyboard_arrow_right),
                     ),
                   ],

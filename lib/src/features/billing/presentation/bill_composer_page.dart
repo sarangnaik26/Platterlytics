@@ -177,7 +177,10 @@ class _BillComposerPageState extends ConsumerState<BillComposerPage> {
                         final formattedTotal = ref.watch(
                           formatCurrencyProvider(cartTotalValue),
                         );
-                        return Text("Done ($formattedTotal)");
+                        return FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text("Done ($formattedTotal)"),
+                        );
                       },
                     ),
                   ),

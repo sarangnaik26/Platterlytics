@@ -91,75 +91,78 @@ class HomeContent extends StatelessWidget {
         ),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo again in center top? No, prompt says "Logo in top left" (App Bar)
-            // "Below, include a single prominent “Calculate” button"
-            // Prompt image shows a logo in center as well? "Home page(highlighted... similar to image provided)". Image 1 shows logo in center above button.
-            // I'll add the logo in center too.
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.restaurant,
-                size: 64,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "Platterlytics",
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 48),
-
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const BillComposerPage(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.calculate, size: 32),
-              label: const Text("Calculate"),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 48,
-                  vertical: 20,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo again in center top? No, prompt says "Logo in top left" (App Bar)
+              // "Below, include a single prominent “Calculate” button"
+              // Prompt image shows a logo in center as well? "Home page(highlighted... similar to image provided)". Image 1 shows logo in center above button.
+              // I'll add the logo in center too.
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
                 ),
-                textStyle: const TextStyle(
-                  fontSize: 24,
+                child: const Icon(
+                  Icons.restaurant,
+                  size: 64,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Platterlytics",
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: AppColors.primary,
                   fontWeight: FontWeight.bold,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                backgroundColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey[900]
-                    : Colors.white,
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary, width: 2),
-                elevation: 4,
               ),
-            ),
-          ],
+
+              const SizedBox(height: 48),
+
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const BillComposerPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.calculate, size: 32),
+                label: const Text("Calculate"),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 48,
+                    vertical: 20,
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  backgroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey[900]
+                      : Colors.white,
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary, width: 2),
+                  elevation: 4,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

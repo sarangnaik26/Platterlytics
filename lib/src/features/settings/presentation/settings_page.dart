@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'settings_providers.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -282,6 +283,46 @@ class SettingsPage extends ConsumerWidget {
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, s) => Center(child: Text("Error: $e")),
+          ),
+          const Divider(),
+
+          // About Section
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              "About",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.privacy_tip),
+            title: const Text("Privacy Policy"),
+            subtitle: const Text("Read our privacy policy"),
+            onTap: () async {
+              // TODO: Replace with the actual hosted URL of the privacy policy
+              final Uri url = Uri.parse(
+                'https://github.com/sarangnaik26/Platterlytics/blob/main/docs/index.html',
+              );
+              try {
+                if (!await launchUrl(url)) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Could not launch privacy policy"),
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Error launching privacy policy: $e"),
+                    ),
+                  );
+                }
+              }
+            },
           ),
         ],
       ),

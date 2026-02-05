@@ -259,10 +259,6 @@ class CategoryCard extends ConsumerWidget {
                           child: Text("Rename"),
                         ),
                         const PopupMenuItem(
-                          value: 'priority',
-                          child: Text("Set Priority"),
-                        ),
-                        const PopupMenuItem(
                           value: 'color',
                           child: Text("Color Code"),
                         ),
@@ -285,8 +281,25 @@ class CategoryCard extends ConsumerWidget {
                             builder: (_) =>
                                 RenameCategoryDialog(category: category),
                           );
+                        } else if (value == 'color') {
+                          showDialog(
+                            context: context,
+                            builder: (context) => _ColorPickerDialog(
+                              category: category,
+                              onColorSelected: (color) {
+                                final updated = Category(
+                                  id: category.id,
+                                  name: category.name,
+                                  color: color.toARGB32(),
+                                  priority: category.priority,
+                                );
+                                ref
+                                    .read(categoriesProvider.notifier)
+                                    .updateCategory(updated);
+                              },
+                            ),
+                          );
                         }
-                        // Handle others
                       },
                     ),
                   ],
@@ -748,4 +761,129 @@ void showConfirmDialog({
       ],
     ),
   );
+}
+
+class _ColorPickerDialog extends StatefulWidget {
+  final Category category;
+  final ValueChanged<Color> onColorSelected;
+
+  const _ColorPickerDialog({
+    required this.category,
+    required this.onColorSelected,
+  });
+
+  @override
+  State<_ColorPickerDialog> createState() => _ColorPickerDialogState();
+}
+
+class _ColorPickerDialogState extends State<_ColorPickerDialog> {
+  late Color _selectedColor;
+
+  final List<Color> _colors = [
+    const Color(0xFFEF5350), // Red
+    const Color(0xFFEC407A), // Pink
+    const Color(0xFFAB47BC), // Purple
+    const Color(0xFF7E57C2), // Deep Purple
+    const Color(0xFF5C6BC0), // Indigo
+    const Color(0xFF42A5F5), // Blue
+    const Color(0xFF26A69A), // Teal
+    const Color(0xFF66BB6A), // Green
+    const Color(0xFFFFCA28), // Amber
+    const Color(0xFFFFA726), // Orange
+    const Color(0xFF8D6E63), // Brown
+    const Color(0xFF78909C), // Blue Grey
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedColor = Color(widget.category.color);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Choose Color",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+              ),
+              itemCount: _colors.length,
+              itemBuilder: (context, index) {
+                final color = _colors[index];
+                final isSelected =
+                    _selectedColor.toARGB32() == color.toARGB32();
+                return InkWell(
+                  onTap: () => setState(() => _selectedColor = color),
+                  borderRadius: BorderRadius.circular(30),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? Colors.black : Colors.transparent,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check, color: Colors.white, size: 20)
+                        : null,
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  widget.onColorSelected(_selectedColor);
+                  Navigator.pop(context);
+                },
+                child: const Text("Set Color"),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
