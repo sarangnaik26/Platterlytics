@@ -15,7 +15,7 @@ class Cart extends _$Cart {
   void addItem({
     required MenuItem menuItem,
     required MenuPrice price,
-    required int quantity,
+    required double quantity,
   }) {
     // Check if item with same menuId and unit exists
     final existingIndex = state.indexWhere(
@@ -63,7 +63,7 @@ class Cart extends _$Cart {
     }
   }
 
-  void updateQuantity(int index, int quantity) {
+  void updateQuantity(int index, double quantity) {
     if (index >= 0 && index < state.length) {
       final item = state[index];
       if (quantity <= 0) {

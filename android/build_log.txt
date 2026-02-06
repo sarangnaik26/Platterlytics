@@ -1,0 +1,53 @@
+> Task :gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle:compileKotlin UP-TO-DATE
+> Task :gradle:compileJava NO-SOURCE
+> Task :gradle:compileGroovy NO-SOURCE
+> Task :gradle:pluginDescriptors UP-TO-DATE
+> Task :gradle:processResources UP-TO-DATE
+> Task :gradle:classes UP-TO-DATE
+> Task :gradle:jar UP-TO-DATE
+
+> Configure project :app
+e: file:///C:/dev/projects/Platterlytics/android/app/build.gradle.kts:8:31: Unresolved reference: util
+e: file:///C:/dev/projects/Platterlytics/android/app/build.gradle.kts:11:34: Unresolved reference: io
+w: file:///C:/dev/projects/Platterlytics/android/app/build.gradle.kts:25:9: 'jvmTarget: String' is deprecated. Please migrate to the compilerOptions DSL. More details are here: https://kotl.in/u1r8ln
+w: file:///C:/dev/projects/Platterlytics/android/app/build.gradle.kts:41:55: No cast needed
+w: file:///C:/dev/projects/Platterlytics/android/app/build.gradle.kts:42:61: No cast needed
+w: file:///C:/dev/projects/Platterlytics/android/app/build.gradle.kts:44:65: No cast needed
+
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file 'C:\dev\projects\Platterlytics\android\app\build.gradle.kts' line: 8
+
+* What went wrong:
+Script compilation errors:
+
+  Line 08: val keystoreProperties = java.util.Properties()
+                                         ^ Unresolved reference: util
+
+  Line 11:     keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+                                            ^ Unresolved reference: io
+
+  Line 25:         jvmTarget = JavaVersion.VERSION_17.toString()
+                   ^ 'jvmTarget: String' is deprecated. Please migrate to the compilerOptions DSL. More details are here: https://kotl.in/u1r8ln
+
+  Line 41:             keyAlias = keystoreProperties["keyAlias"] as String
+                                                                 ^ No cast needed
+
+  Line 42:             keyPassword = keystoreProperties["keyPassword"] as String
+                                                                       ^ No cast needed
+
+  Line 44:             storePassword = keystoreProperties["storePassword"] as String
+                                                                           ^ No cast needed
+
+6 errors
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 2s
+4 actionable tasks: 4 up-to-date

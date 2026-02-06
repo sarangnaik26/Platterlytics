@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -8,6 +9,7 @@ import '../domain/bill_model.dart';
 import '../../settings/presentation/bill_settings_provider.dart';
 import '../../settings/domain/bill_settings_model.dart';
 import '../../settings/presentation/date_format_provider.dart';
+import '../../../core/utils/formatters.dart';
 
 class BillSuccessView extends ConsumerStatefulWidget {
   final Bill bill;
@@ -19,6 +21,27 @@ class BillSuccessView extends ConsumerStatefulWidget {
 
 class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
   final ScreenshotController _screenshotController = ScreenshotController();
+
+  @override
+  void initState() {
+    super.initState();
+    _cleanupOldScreenshots();
+  }
+
+  Future<void> _cleanupOldScreenshots() async {
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      if (await docDir.exists()) {
+        await for (var file in docDir.list()) {
+          if (file is File && file.path.toLowerCase().endsWith('.png')) {
+            await file.delete();
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error cleaning up screenshots: $e");
+    }
+  }
 
   void _shareAsText(Bill bill, BillSettings settings) {
     String text = "";
@@ -39,8 +62,8 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
       final formattedPrice = settings.currencyAtEnd
           ? "${item.totalItemPrice.toStringAsFixed(2)} ${settings.currencySymbol}"
           : "${settings.currencySymbol} ${item.totalItemPrice.toStringAsFixed(2)}";
-      text +=
-          "${item.itemName} (${item.quantity} x ${item.unit}) : $formattedPrice\n";
+      final qStr = formatQuantity(item.quantity);
+      text += "${item.itemName} ($qStr x ${item.unit}) : $formattedPrice\n";
     }
     text += "--------------------------------\n";
     final formattedTotal = settings.currencyAtEnd
@@ -56,7 +79,7 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
   }
 
   Future<void> _shareAsImage() async {
-    final directory = (await getApplicationDocumentsDirectory()).path;
+    final directory = (await getTemporaryDirectory()).path;
     final imagePath = await _screenshotController.captureAndSave(directory);
     if (imagePath != null) {
       // ignore: deprecated_member_use
@@ -154,7 +177,7 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  "${item.itemName} (${item.quantity} x ${item.unit})",
+                                  "${item.itemName} (${formatQuantity(item.quantity)} x ${item.unit})",
                                   style: const TextStyle(color: Colors.black),
                                 ),
                               ),
@@ -316,8 +339,9 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
       final unitPrice = item.price.toStringAsFixed(2);
 
       text += "${item.itemName}\n";
+      final qStr = formatQuantity(item.quantity);
       text +=
-          "  ${item.quantity} ${item.unit} x ${settings.currencySymbol}$unitPrice = $formattedItemPrice\n";
+          "  $qStr ${item.unit} x ${settings.currencySymbol}$unitPrice = $formattedItemPrice\n";
     }
     text += "------------------------------\n";
 

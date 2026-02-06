@@ -4,7 +4,7 @@ class BillItem {
   final int menuId;
   final String itemName; // Snapshot of name
   final String unit;
-  final int quantity;
+  final double quantity;
   final double price; // Snapshot of price
   final double totalItemPrice;
 

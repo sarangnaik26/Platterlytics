@@ -61,7 +61,7 @@ class BillRepository {
               menuId: e['menu_id'] as int,
               itemName: e['item_name'] as String,
               unit: e['unit'] as String,
-              quantity: e['quantity'] as int,
+              quantity: (e['quantity'] as num).toDouble(),
               price: e['price'] as double,
               totalItemPrice: e['total_item_price'] as double,
             ),

@@ -10,6 +10,7 @@ import 'analytics_providers.dart';
 import '../../settings/presentation/bill_settings_provider.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../../settings/presentation/date_format_provider.dart';
+import '../../../core/utils/formatters.dart';
 
 enum ItemAnalyticsMode { daily, range, weekday }
 
@@ -484,7 +485,7 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
 
   Widget _buildStandardContent(Map<String, dynamic> data) {
     final totalSales = (data['totalSales'] as num).toDouble(); // mapped from DB
-    final totalQty = data['totalQty'] as int;
+    final totalQty = (data['totalQty'] as num).toDouble();
     final chartData = _selectedMode == ItemAnalyticsMode.range
         ? data['dailyData'] as List<Map<String, dynamic>>
         : data['hourlyData'] as List<Map<String, dynamic>>;
@@ -506,7 +507,11 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _MetricCard("Quantity", totalQty.toString(), Colors.blue),
+              child: _MetricCard(
+                "Quantity",
+                formatQuantity(totalQty),
+                Colors.blue,
+              ),
             ),
           ],
         ),
@@ -585,7 +590,7 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     if (rod.toY == 0) return null;
                     return BarTooltipItem(
-                      rod.toY.toStringAsFixed(0),
+                      formatQuantity(rod.toY),
                       const TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.bold,
@@ -685,7 +690,7 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
             Expanded(
               child: _MetricCard(
                 "Avg Quantity",
-                avgQty.toStringAsFixed(1),
+                formatQuantity(avgQty),
                 Colors.blue,
               ),
             ),

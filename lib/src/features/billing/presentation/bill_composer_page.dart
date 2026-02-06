@@ -9,6 +9,7 @@ import '../data/bill_repository.dart';
 import '../domain/bill_model.dart';
 import 'cart_provider.dart';
 import 'bill_success_view.dart';
+import '../../../core/utils/formatters.dart';
 
 class BillComposerPage extends ConsumerStatefulWidget {
   const BillComposerPage({super.key});
@@ -375,8 +376,11 @@ class BillingCategoryCard extends ConsumerWidget {
                     items: item.prices.map((p) {
                       return DropdownMenuItem(
                         value: p,
-                        child: Text(
-                          "${p.unit} - ${ref.read(currencySymbolProvider)}${p.price}",
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            "${p.unit} - ${ref.read(currencySymbolProvider)}${p.price}",
+                          ),
                         ),
                       );
                     }).toList(),
@@ -387,11 +391,25 @@ class BillingCategoryCard extends ConsumerWidget {
                     },
                   ),
                   const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Quantity",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   TextField(
                     controller: quantityController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Quantity"),
                     autofocus: true,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: "Enter quantity",
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 ],
               ),
@@ -402,7 +420,7 @@ class BillingCategoryCard extends ConsumerWidget {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    final qty = int.tryParse(quantityController.text) ?? 1;
+                    final qty = double.tryParse(quantityController.text) ?? 1.0;
                     if (qty > 0) {
                       ref
                           .read(cartProvider.notifier)
@@ -424,6 +442,8 @@ class BillingCategoryCard extends ConsumerWidget {
     );
   }
 }
+
+String _formatQuantity(double q) => formatQuantity(q);
 
 class CartBottomSheet extends ConsumerWidget {
   const CartBottomSheet({super.key});
@@ -459,9 +479,8 @@ class CartBottomSheet extends ConsumerWidget {
                       final formatted = ref.watch(
                         formatCurrencyProvider(item.price),
                       );
-                      return Text(
-                        "${item.quantity} x ${item.unit} @ $formatted",
-                      );
+                      final qStr = _formatQuantity(item.quantity);
+                      return Text("$qStr x ${item.unit} @ $formatted");
                     },
                   ),
                   trailing: Row(

@@ -51,8 +51,10 @@ class MenuController extends _$MenuController {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await repository.addMenuItem(item);
-      ref.invalidate(menuItemsProvider);
     });
+    if (!state.hasError) {
+      ref.invalidate(menuItemsProvider);
+    }
   }
 
   Future<void> deleteMenuItem(int id) async {
@@ -60,8 +62,10 @@ class MenuController extends _$MenuController {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await repository.deleteMenuItem(id);
-      ref.invalidate(menuItemsProvider);
     });
+    if (!state.hasError) {
+      ref.invalidate(menuItemsProvider);
+    }
   }
 
   Future<void> updateMenuItem(MenuItem item) async {
@@ -69,7 +73,9 @@ class MenuController extends _$MenuController {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await repository.updateMenuItem(item);
-      ref.invalidate(menuItemsProvider);
     });
+    if (!state.hasError) {
+      ref.invalidate(menuItemsProvider);
+    }
   }
 }

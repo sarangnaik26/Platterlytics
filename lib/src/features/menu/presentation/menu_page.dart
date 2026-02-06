@@ -477,7 +477,15 @@ class _MenuItemDialogState extends ConsumerState<MenuItemDialog> {
   // List to hold the controllers for each price entry
   final List<Map<String, dynamic>> _priceEntries = [];
 
-  final List<String> _unitOptions = ['Piece', 'Plate', 'Kg', 'Liter'];
+  final List<String> _unitOptions = [
+    'Piece',
+    'Plate',
+    'Kg',
+    'Liter',
+    'Glass',
+    'Bottle',
+    'Slice',
+  ];
 
   @override
   void initState() {
@@ -555,7 +563,7 @@ class _MenuItemDialogState extends ConsumerState<MenuItemDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 3,
+                      flex: 4,
                       child: DropdownButtonFormField<String>(
                         initialValue: data['unit'],
                         isExpanded: true,
@@ -570,9 +578,12 @@ class _MenuItemDialogState extends ConsumerState<MenuItemDialog> {
                         items: _unitOptions.map((unit) {
                           return DropdownMenuItem(
                             value: unit,
-                            child: Text(
-                              unit,
-                              style: const TextStyle(fontSize: 13),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                unit,
+                                style: const TextStyle(fontSize: 13),
+                              ),
                             ),
                           );
                         }).toList(),
@@ -587,7 +598,7 @@ class _MenuItemDialogState extends ConsumerState<MenuItemDialog> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      flex: 4,
+                      flex: 5,
                       child: TextField(
                         controller: data['priceController'],
                         keyboardType: TextInputType.number,

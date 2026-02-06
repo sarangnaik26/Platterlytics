@@ -8,6 +8,7 @@ import '../../billing/data/bill_repository.dart';
 import '../../billing/domain/bill_model.dart';
 import '../../settings/presentation/bill_settings_provider.dart';
 import '../../settings/presentation/date_format_provider.dart';
+import '../../../core/utils/formatters.dart';
 
 // Provider for History
 final billHistoryProvider = FutureProvider.autoDispose
@@ -150,7 +151,7 @@ class BillDetailsPage extends ConsumerWidget {
                 return ListTile(
                   title: Text(item.itemName),
                   subtitle: Text(
-                    "${item.quantity} x ${item.unit} @ $symbol${item.price}",
+                    "${formatQuantity(item.quantity)} x ${item.unit} @ $symbol${item.price}",
                   ),
                   trailing: Text(
                     "$symbol${item.totalItemPrice.toStringAsFixed(2)}",
@@ -199,7 +200,7 @@ class BillDetailsPage extends ConsumerWidget {
                   children: [
                     pw.Expanded(
                       child: pw.Text(
-                        "${item.quantity} x ${item.itemName} (${item.unit})",
+                        "${formatQuantity(item.quantity)} x ${item.itemName} (${item.unit})",
                       ),
                     ),
                     pw.Text("$symbol${item.totalItemPrice.toStringAsFixed(2)}"),
