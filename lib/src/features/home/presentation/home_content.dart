@@ -48,7 +48,7 @@ class HomeContent extends StatelessWidget {
             const DrawerHeader(
               decoration: BoxDecoration(color: AppColors.primary),
               child: Text(
-                'Values',
+                'Platterlytics',
                 style: TextStyle(color: Colors.white, fontSize: 24),
               ),
             ),

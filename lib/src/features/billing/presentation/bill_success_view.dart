@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -21,27 +21,6 @@ class BillSuccessView extends ConsumerStatefulWidget {
 
 class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
   final ScreenshotController _screenshotController = ScreenshotController();
-
-  @override
-  void initState() {
-    super.initState();
-    _cleanupOldScreenshots();
-  }
-
-  Future<void> _cleanupOldScreenshots() async {
-    try {
-      final docDir = await getApplicationDocumentsDirectory();
-      if (await docDir.exists()) {
-        await for (var file in docDir.list()) {
-          if (file is File && file.path.toLowerCase().endsWith('.png')) {
-            await file.delete();
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint("Error cleaning up screenshots: $e");
-    }
-  }
 
   void _shareAsText(Bill bill, BillSettings settings) {
     String text = "";
@@ -79,13 +58,23 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
   }
 
   Future<void> _shareAsImage() async {
-    final directory = (await getTemporaryDirectory()).path;
+    final directory = (await getApplicationDocumentsDirectory()).path;
     final imagePath = await _screenshotController.captureAndSave(directory);
+
     if (imagePath != null) {
+      final file = XFile(imagePath);
       // ignore: deprecated_member_use
-      await Share.shareXFiles([
-        XFile(imagePath),
-      ], text: 'Bill from Platterlytics');
+      await Share.shareXFiles([file], text: 'Bill from Platterlytics');
+
+      // Cleanup: Delete the image file after sharing
+      try {
+        final ioFile = File(imagePath);
+        if (await ioFile.exists()) {
+          await ioFile.delete();
+        }
+      } catch (e) {
+        debugPrint("Error deleting file: $e");
+      }
     }
   }
 

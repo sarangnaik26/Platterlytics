@@ -356,89 +356,124 @@ class BillingCategoryCard extends ConsumerWidget {
   }
 
   void _showAddItemDialog(BuildContext context, WidgetRef ref, MenuItem item) {
-    // If multiple prices, let user select. Default to first.
-    MenuPrice selectedPrice = item.prices.first;
-    final quantityController = TextEditingController(text: "1");
-
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text("Add ${item.itemName}"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<MenuPrice>(
-                    initialValue: selectedPrice,
-                    decoration: const InputDecoration(labelText: "Unit"),
-                    items: item.prices.map((p) {
-                      return DropdownMenuItem(
-                        value: p,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            "${p.unit} - ${ref.read(currencySymbolProvider)}${p.price}",
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() => selectedPrice = val);
-                      }
-                    },
+      builder: (context) => _AddItemDialog(item: item),
+    );
+  }
+}
+
+class _AddItemDialog extends ConsumerStatefulWidget {
+  final MenuItem item;
+
+  const _AddItemDialog({required this.item});
+
+  @override
+  ConsumerState<_AddItemDialog> createState() => _AddItemDialogState();
+}
+
+class _AddItemDialogState extends ConsumerState<_AddItemDialog> {
+  late MenuPrice _selectedPrice;
+  late TextEditingController _quantityController;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPrice = widget.item.prices.first;
+    _quantityController = TextEditingController(text: "1");
+  }
+
+  @override
+  void dispose() {
+    _quantityController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text("Add ${widget.item.itemName}"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<MenuPrice>(
+            value: _selectedPrice,
+            decoration: const InputDecoration(labelText: "Unit"),
+            items: widget.item.prices.map((p) {
+              return DropdownMenuItem(
+                value: p,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    "${p.unit} - ${ref.read(currencySymbolProvider)}${p.price}",
                   ),
-                  const SizedBox(height: 16),
-                  const SizedBox(height: 16),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Quantity",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: quantityController,
-                    autofocus: true,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      hintText: "Enter quantity",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cancel"),
                 ),
-                ElevatedButton(
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() => _selectedPrice = val);
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _quantityController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: "Quantity",
+              border: OutlineInputBorder(),
+            ),
+            autofocus: true,
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [0.25, 0.5, 1, 2, 3, 4].map((val) {
+              return SizedBox(
+                width: 70,
+                child: OutlinedButton(
                   onPressed: () {
-                    final qty = double.tryParse(quantityController.text) ?? 1.0;
-                    if (qty > 0) {
-                      ref
-                          .read(cartProvider.notifier)
-                          .addItem(
-                            menuItem: item,
-                            price: selectedPrice,
-                            quantity: qty,
-                          );
-                      Navigator.pop(context);
-                    }
+                    _quantityController.text = (val % 1 == 0)
+                        ? val.toInt().toString()
+                        : val.toString();
                   },
-                  child: const Text("Add"),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: Text(
+                    (val % 1 == 0) ? val.toInt().toString() : val.toString(),
+                  ),
                 ),
-              ],
-            );
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final qty = double.tryParse(_quantityController.text) ?? 1.0;
+            if (qty > 0) {
+              ref
+                  .read(cartProvider.notifier)
+                  .addItem(
+                    menuItem: widget.item,
+                    price: _selectedPrice,
+                    quantity: qty,
+                  );
+              Navigator.pop(context);
+            }
           },
-        );
-      },
+          child: const Text("Add"),
+        ),
+      ],
     );
   }
 }
