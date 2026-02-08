@@ -323,6 +323,11 @@ class SettingsPage extends ConsumerWidget {
               }
             },
           ),
+          const ListTile(
+            leading: Icon(Icons.email),
+            title: Text("Contact Us"),
+            subtitle: Text("fairyprisme@gmail.com"),
+          ),
         ],
       ),
     );

@@ -215,7 +215,6 @@ class _BillingContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Improve: Instead of filtering, we just scroll to the category (TODO if ScrollController added)
     // For now, per user request, we do NOT filter them out.
     // They wanted "other categories to appear below", i.e. show all.
     final displayCategories = categories;

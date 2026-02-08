@@ -277,7 +277,7 @@ class AnalyticsRepository {
 
     final totalSales = (result.first['total'] as num?)?.toDouble() ?? 0.0;
     final billCount = (result.first['count'] as num?)?.toInt() ?? 0;
-    final totalQty = (result.first['qty'] as num?)?.toInt() ?? 0;
+    final totalQty = (result.first['qty'] as num?)?.toDouble() ?? 0.0;
 
     // Hourly Item Sales
     final hourlyData = await db.rawQuery(
@@ -294,12 +294,13 @@ class AnalyticsRepository {
 
     // Hourly Item Sales - Fill gaps
     final List<Map<String, dynamic>> hourlyDataComplete = [];
-    final Map<String, int> hourlyMap = {
-      for (var row in hourlyData) row['hour'] as String: row['qty'] as int,
+    final Map<String, double> hourlyMap = {
+      for (var row in hourlyData)
+        row['hour'] as String: (row['qty'] as num).toDouble(),
     };
     for (int i = 0; i < 24; i++) {
       final h = i.toString().padLeft(2, '0');
-      hourlyDataComplete.add({'hour': h, 'qty': hourlyMap[h] ?? 0});
+      hourlyDataComplete.add({'hour': h, 'qty': hourlyMap[h] ?? 0.0});
     }
 
     return {
@@ -330,7 +331,7 @@ class AnalyticsRepository {
 
     final totalSales = (result.first['total'] as num?)?.toDouble() ?? 0.0;
     final billCount = (result.first['count'] as num?)?.toInt() ?? 0;
-    final totalQty = (result.first['qty'] as num?)?.toInt() ?? 0;
+    final totalQty = (result.first['qty'] as num?)?.toDouble() ?? 0.0;
 
     final dailyData = await db.rawQuery(
       '''
@@ -346,15 +347,16 @@ class AnalyticsRepository {
 
     // Daily Item Sales - Fill gaps
     final List<Map<String, dynamic>> dailyDataComplete = [];
-    final Map<String, int> dailyMap = {
-      for (var row in dailyData) row['date'] as String: row['qty'] as int,
+    final Map<String, double> dailyMap = {
+      for (var row in dailyData)
+        row['date'] as String: (row['qty'] as num).toDouble(),
     };
     DateTime start = DateTime.parse(startDate);
     DateTime end = DateTime.parse(endDate);
     for (int i = 0; i <= end.difference(start).inDays; i++) {
       final d = start.add(Duration(days: i));
       final dateStr = d.toIso8601String().split('T')[0];
-      dailyDataComplete.add({'date': dateStr, 'qty': dailyMap[dateStr] ?? 0});
+      dailyDataComplete.add({'date': dateStr, 'qty': dailyMap[dateStr] ?? 0.0});
     }
 
     return {
@@ -409,10 +411,10 @@ class AnalyticsRepository {
     }
 
     double totalItemSales = 0;
-    int totalItemQty = 0;
+    double totalItemQty = 0;
     for (var day in history) {
       totalItemSales += (day['total'] as num).toDouble();
-      totalItemQty += (day['qty'] as int);
+      totalItemQty += (day['qty'] as num).toDouble();
     }
     double avgQty = totalItemQty / history.length;
 
@@ -511,7 +513,7 @@ class AnalyticsRepository {
       'avgQty': avgQty,
       'latest': {
         'date': latestDate,
-        'qty': (latestDay['qty'] as int),
+        'qty': (latestDay['qty'] as num).toDouble(),
         'coSelling': coSellingData,
       },
       'trend': {'growth': growth, 'consistency': consistencyLabel},
