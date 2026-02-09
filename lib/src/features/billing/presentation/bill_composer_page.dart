@@ -396,7 +396,7 @@ class _AddItemDialogState extends ConsumerState<_AddItemDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           DropdownButtonFormField<MenuPrice>(
-            value: _selectedPrice,
+            initialValue: _selectedPrice,
             decoration: const InputDecoration(labelText: "Unit"),
             items: widget.item.prices.map((p) {
               return DropdownMenuItem(

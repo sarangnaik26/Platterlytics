@@ -58,9 +58,14 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
         );
         break;
       case AnalyticsMode.weekday:
-        statsAsync = ref.watch(
-          weekdayStatsProvider(weeksBack, _selectedWeekday),
-        );
+        if (_selectedWeekday == 0) {
+          // 0 represents "Week" (Consolidated)
+          statsAsync = ref.watch(weeklyStatsProvider(weeksBack));
+        } else {
+          statsAsync = ref.watch(
+            weekdayStatsProvider(weeksBack, _selectedWeekday),
+          );
+        }
         break;
     }
 
@@ -101,10 +106,13 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(7, (index) {
-                        final dayIndex = index + 1;
+                      children: List.generate(8, (index) {
+                        // Increased to 8 to include "Week"
+                        // 0 = Week, 1=Mon, ..., 7=Sun
+                        final dayIndex = index;
                         final isSelected = _selectedWeekday == dayIndex;
-                        const days = [
+                        const labels = [
+                          "Week", // Index 0
                           "Mon",
                           "Tue",
                           "Wed",
@@ -116,7 +124,7 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4.0),
                           child: ChoiceChip(
-                            label: Text(days[index]),
+                            label: Text(labels[index]),
                             selected: isSelected,
                             onSelected: (selected) {
                               if (selected) {
@@ -435,6 +443,7 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
 
   Widget _buildWeekdayContent(Map<String, dynamic> data, int weeksBack) {
     String getDayName(int w) {
+      if (w == 0) return "Week";
       switch (w) {
         case 1:
           return "Monday";
@@ -491,7 +500,7 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
           textAlign: TextAlign.center,
         ),
         Text(
-          "Based on last ${data['totalWeeks'] ?? weeksBack} ${getDayName(_selectedWeekday)}s",
+          "Based on last ${data['totalWeeks'] ?? weeksBack} ${_selectedWeekday == 0 ? 'Weeks' : '${getDayName(_selectedWeekday)}s'}",
           style: const TextStyle(fontSize: 14, color: Colors.grey),
           textAlign: TextAlign.center,
         ),
@@ -516,9 +525,11 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
         if (latestSnapshot != null) ...[
           Card(
             child: ListTile(
-              title: const Text(
-                "Latest Week Snapshot",
-                style: TextStyle(fontWeight: FontWeight.bold),
+              title: Text(
+                _selectedWeekday == 0 && latestSnapshot.containsKey('weekRange')
+                    ? "Latest Week (${latestSnapshot['weekRange']})"
+                    : "Latest Week Snapshot",
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Consumer(
                 builder: (context, ref, _) {
@@ -565,25 +576,27 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
           ],
         ),
         const SizedBox(height: 8),
-        Card(
-          color: const Color(0xFFFFF8E1),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                const Icon(Icons.lightbulb_outline, color: Colors.amber),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    "${getDayName(_selectedWeekday)} contributes ${(contribution * 100).toStringAsFixed(1)}% of weekly sales",
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+        if (_selectedWeekday !=
+            0) // Hide contribution for "Week" view if not relevant, or show as 100%
+          Card(
+            color: const Color(0xFFFFF8E1),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.lightbulb_outline, color: Colors.amber),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "${getDayName(_selectedWeekday)} contributes ${(contribution * 100).toStringAsFixed(1)}% of weekly sales",
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 24),
+        if (_selectedWeekday != 0) const SizedBox(height: 24),
 
         // Best Selling Items
         const Text(
@@ -593,13 +606,23 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
         const SizedBox(height: 8),
         ...topItems.map((item) {
           final name = item['item_name'];
-          final qty = item['qty'];
+          // Calculate percentage contribution
+          // totalSales for the period = avgSales * totalWeeks
+          final totalWeeks = data['totalWeeks'] as int? ?? weeksBack;
+          final totalPeriodSales = avgSales * totalWeeks;
+          final itemTotal = (item['total'] as num?)?.toDouble() ?? 0.0;
+
+          double percentage = 0;
+          if (totalPeriodSales > 0) {
+            percentage = (itemTotal / totalPeriodSales) * 100;
+          }
+
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
               leading: CircleAvatar(child: Text(name[0].toUpperCase())),
               title: Text(name),
-              trailing: Text("$qty sold"),
+              trailing: Text("${percentage.toStringAsFixed(1)}%"),
             ),
           );
         }),
@@ -611,7 +634,7 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
           "Sales History",
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 24),
         SizedBox(
           height: 250,
           child: BarChart(
@@ -632,6 +655,24 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
                         // "List<Map<String, dynamic>> history = List.from(result.reversed);"
                         // Result was DESC (latest first). Reversed -> oldest first. Correct.
                         final item = history[value.toInt()];
+                        // Check if it's a weekday date or week range/id
+                        // Week ID from getWeeklySalesStats is YYYY-WW (e.g. 2024-05)
+                        // Weekday dates are YYYY-MM-DD
+
+                        // For Weekly View: Display Week Number or Start Date
+                        if (_selectedWeekday == 0) {
+                          final range = item['weekRange'] as String? ?? "";
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              range,
+                              style: const TextStyle(fontSize: 8),
+                              textAlign: TextAlign.center,
+                            ),
+                          );
+                        }
+
+                        // For Weekday View:
                         final d = DateTime.tryParse(item['date']);
                         return Padding(
                           padding: const EdgeInsets.only(top: 8.0),
@@ -659,6 +700,24 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
                 ),
                 rightTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
+                ),
+              ),
+              barTouchData: BarTouchData(
+                enabled: false,
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (_) => Colors.transparent,
+                  tooltipPadding: EdgeInsets.zero,
+                  tooltipMargin: 2,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    return BarTooltipItem(
+                      rod.toY.toStringAsFixed(0),
+                      const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    );
+                  },
                 ),
               ),
               borderData: FlBorderData(show: false),

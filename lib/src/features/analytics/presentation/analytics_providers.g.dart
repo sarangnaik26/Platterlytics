@@ -845,5 +845,258 @@ class _ItemWeekdayStatsProviderElement
   int get weekday => (origin as ItemWeekdayStatsProvider).weekday;
 }
 
+String _$weeklyStatsHash() => r'5180300e6b1867b41eabbabd56d8850dacdd7794';
+
+/// See also [weeklyStats].
+@ProviderFor(weeklyStats)
+const weeklyStatsProvider = WeeklyStatsFamily();
+
+/// See also [weeklyStats].
+class WeeklyStatsFamily extends Family<AsyncValue<Map<String, dynamic>>> {
+  /// See also [weeklyStats].
+  const WeeklyStatsFamily();
+
+  /// See also [weeklyStats].
+  WeeklyStatsProvider call(int weeksBack) {
+    return WeeklyStatsProvider(weeksBack);
+  }
+
+  @override
+  WeeklyStatsProvider getProviderOverride(
+    covariant WeeklyStatsProvider provider,
+  ) {
+    return call(provider.weeksBack);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'weeklyStatsProvider';
+}
+
+/// See also [weeklyStats].
+class WeeklyStatsProvider
+    extends AutoDisposeFutureProvider<Map<String, dynamic>> {
+  /// See also [weeklyStats].
+  WeeklyStatsProvider(int weeksBack)
+    : this._internal(
+        (ref) => weeklyStats(ref as WeeklyStatsRef, weeksBack),
+        from: weeklyStatsProvider,
+        name: r'weeklyStatsProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$weeklyStatsHash,
+        dependencies: WeeklyStatsFamily._dependencies,
+        allTransitiveDependencies: WeeklyStatsFamily._allTransitiveDependencies,
+        weeksBack: weeksBack,
+      );
+
+  WeeklyStatsProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.weeksBack,
+  }) : super.internal();
+
+  final int weeksBack;
+
+  @override
+  Override overrideWith(
+    FutureOr<Map<String, dynamic>> Function(WeeklyStatsRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: WeeklyStatsProvider._internal(
+        (ref) => create(ref as WeeklyStatsRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        weeksBack: weeksBack,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<Map<String, dynamic>> createElement() {
+    return _WeeklyStatsProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is WeeklyStatsProvider && other.weeksBack == weeksBack;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, weeksBack.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin WeeklyStatsRef on AutoDisposeFutureProviderRef<Map<String, dynamic>> {
+  /// The parameter `weeksBack` of this provider.
+  int get weeksBack;
+}
+
+class _WeeklyStatsProviderElement
+    extends AutoDisposeFutureProviderElement<Map<String, dynamic>>
+    with WeeklyStatsRef {
+  _WeeklyStatsProviderElement(super.provider);
+
+  @override
+  int get weeksBack => (origin as WeeklyStatsProvider).weeksBack;
+}
+
+String _$itemWeeklyStatsHash() => r'd39a3ac4cb7b8ec9709a9fe6a5e0b9940d8f627b';
+
+/// See also [itemWeeklyStats].
+@ProviderFor(itemWeeklyStats)
+const itemWeeklyStatsProvider = ItemWeeklyStatsFamily();
+
+/// See also [itemWeeklyStats].
+class ItemWeeklyStatsFamily extends Family<AsyncValue<Map<String, dynamic>>> {
+  /// See also [itemWeeklyStats].
+  const ItemWeeklyStatsFamily();
+
+  /// See also [itemWeeklyStats].
+  ItemWeeklyStatsProvider call(int menuId, int weeksBack) {
+    return ItemWeeklyStatsProvider(menuId, weeksBack);
+  }
+
+  @override
+  ItemWeeklyStatsProvider getProviderOverride(
+    covariant ItemWeeklyStatsProvider provider,
+  ) {
+    return call(provider.menuId, provider.weeksBack);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'itemWeeklyStatsProvider';
+}
+
+/// See also [itemWeeklyStats].
+class ItemWeeklyStatsProvider
+    extends AutoDisposeFutureProvider<Map<String, dynamic>> {
+  /// See also [itemWeeklyStats].
+  ItemWeeklyStatsProvider(int menuId, int weeksBack)
+    : this._internal(
+        (ref) => itemWeeklyStats(ref as ItemWeeklyStatsRef, menuId, weeksBack),
+        from: itemWeeklyStatsProvider,
+        name: r'itemWeeklyStatsProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$itemWeeklyStatsHash,
+        dependencies: ItemWeeklyStatsFamily._dependencies,
+        allTransitiveDependencies:
+            ItemWeeklyStatsFamily._allTransitiveDependencies,
+        menuId: menuId,
+        weeksBack: weeksBack,
+      );
+
+  ItemWeeklyStatsProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.menuId,
+    required this.weeksBack,
+  }) : super.internal();
+
+  final int menuId;
+  final int weeksBack;
+
+  @override
+  Override overrideWith(
+    FutureOr<Map<String, dynamic>> Function(ItemWeeklyStatsRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: ItemWeeklyStatsProvider._internal(
+        (ref) => create(ref as ItemWeeklyStatsRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        menuId: menuId,
+        weeksBack: weeksBack,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<Map<String, dynamic>> createElement() {
+    return _ItemWeeklyStatsProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ItemWeeklyStatsProvider &&
+        other.menuId == menuId &&
+        other.weeksBack == weeksBack;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, menuId.hashCode);
+    hash = _SystemHash.combine(hash, weeksBack.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin ItemWeeklyStatsRef on AutoDisposeFutureProviderRef<Map<String, dynamic>> {
+  /// The parameter `menuId` of this provider.
+  int get menuId;
+
+  /// The parameter `weeksBack` of this provider.
+  int get weeksBack;
+}
+
+class _ItemWeeklyStatsProviderElement
+    extends AutoDisposeFutureProviderElement<Map<String, dynamic>>
+    with ItemWeeklyStatsRef {
+  _ItemWeeklyStatsProviderElement(super.provider);
+
+  @override
+  int get menuId => (origin as ItemWeeklyStatsProvider).menuId;
+  @override
+  int get weeksBack => (origin as ItemWeeklyStatsProvider).weeksBack;
+}
+
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

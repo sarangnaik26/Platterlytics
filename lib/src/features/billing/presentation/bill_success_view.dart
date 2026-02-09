@@ -53,8 +53,7 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
       text += "\n${settings.footerNote}";
     }
 
-    // ignore: deprecated_member_use
-    Share.share(text);
+    SharePlus.instance.share(ShareParams(text: text));
   }
 
   Future<void> _shareAsImage() async {
@@ -63,8 +62,10 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
 
     if (imagePath != null) {
       final file = XFile(imagePath);
-      // ignore: deprecated_member_use
-      await Share.shareXFiles([file], text: 'Bill from Platterlytics');
+
+      await SharePlus.instance.share(
+        ShareParams(files: [file], text: 'Bill from Platterlytics'),
+      );
 
       // Cleanup: Delete the image file after sharing
       try {

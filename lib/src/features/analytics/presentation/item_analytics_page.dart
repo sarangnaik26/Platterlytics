@@ -300,13 +300,19 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
         );
         break;
       case ItemAnalyticsMode.weekday:
-        statsAsync = ref.watch(
-          itemWeekdayStatsProvider(
-            widget.item.menuId!,
-            weeksBack,
-            _selectedWeekday,
-          ),
-        );
+        if (_selectedWeekday == 0) {
+          statsAsync = ref.watch(
+            itemWeeklyStatsProvider(widget.item.menuId!, weeksBack),
+          );
+        } else {
+          statsAsync = ref.watch(
+            itemWeekdayStatsProvider(
+              widget.item.menuId!,
+              weeksBack,
+              _selectedWeekday,
+            ),
+          );
+        }
         break;
     }
 
@@ -361,10 +367,12 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(7, (index) {
-                          final dayIndex = index + 1;
+                        children: List.generate(8, (index) {
+                          // 0=Week, 1=Mon...
+                          final dayIndex = index;
                           final isSelected = _selectedWeekday == dayIndex;
-                          const days = [
+                          const labels = [
+                            "Week", // 0
                             "Mon",
                             "Tue",
                             "Wed",
@@ -378,7 +386,7 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
                               horizontal: 4.0,
                             ),
                             child: ChoiceChip(
-                              label: Text(days[index]),
+                              label: Text(labels[index]),
                               selected: isSelected,
                               onSelected: (selected) {
                                 if (selected) {
@@ -490,6 +498,51 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
         ? data['dailyData'] as List<Map<String, dynamic>>
         : data['hourlyData'] as List<Map<String, dynamic>>;
 
+    final totalQtyByUnit = data['totalQtyByUnit'] as Map<String, double>? ?? {};
+    final units = data['units'] as List<String>? ?? [];
+
+    // Calculate maxQty for headroom (sum of all units in a slot)
+    double maxQty = 0;
+    if (chartData.isNotEmpty) {
+      maxQty = chartData
+          .map((e) {
+            // Requirement: "show multiple bars, each for a unit". So side-by-side.
+            // We need the max of any single unit in any slot.
+            double maxUnitInSlot = 0;
+            for (var unit in units) {
+              final q = (e[unit] as num?)?.toDouble() ?? 0.0;
+              if (q > maxUnitInSlot) maxUnitInSlot = q;
+            }
+            return maxUnitInSlot;
+          })
+          .reduce((a, b) => a > b ? a : b);
+    }
+    if (maxQty == 0) maxQty = 5;
+
+    // Define colors for units
+    // We can use a predefined list or generate them.
+    final List<Color> unitColorsPalette = [
+      AppColors.primary,
+      Colors.orange,
+      Colors.green,
+      Colors.red,
+      Colors.purple,
+      Colors.teal,
+    ];
+    final Map<String, Color> unitColors = {};
+    for (int i = 0; i < units.length; i++) {
+      unitColors[units[i]] = unitColorsPalette[i % unitColorsPalette.length];
+    }
+
+    String qtyBreakdown = formatQuantity(totalQty);
+    if (totalQtyByUnit.isNotEmpty) {
+      final parts = <String>[];
+      totalQtyByUnit.forEach((unit, qty) {
+        parts.add("${formatQuantity(qty)} $unit");
+      });
+      qtyBreakdown = parts.join(", ");
+    }
+
     return Column(
       children: [
         Row(
@@ -509,115 +562,177 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
             Expanded(
               child: _MetricCard(
                 "Quantity",
-                formatQuantity(totalQty),
+                qtyBreakdown, // Show breakdown query
                 Colors.blue,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
+        // Legend if multiple units
+        if (units.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: units.map((u) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: unitColors[u],
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(u, style: const TextStyle(fontSize: 12)),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
         SizedBox(
           height: 250,
-          child: BarChart(
-            BarChartData(
-              titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (value, meta) {
-                      if (value.toInt() >= 0 &&
-                          value.toInt() < chartData.length) {
-                        final item = chartData[value.toInt()];
-                        if (_selectedMode == ItemAnalyticsMode.range) {
-                          final d = DateTime.tryParse(item['date']);
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Consumer(
-                              builder: (context, ref, _) {
-                                final formatDate = ref.watch(
-                                  formatDateProvider,
-                                );
-                                if (d == null) return const Text('');
-                                final formatted = formatDate(d);
-                                final parts = formatted.split('/');
-                                String displayLabel;
-                                if (parts.length >= 2) {
-                                  if (formatted.startsWith(RegExp(r'\d{4}'))) {
-                                    displayLabel = '${parts[1]}/${parts[2]}';
-                                  } else {
-                                    displayLabel = '${parts[0]}/${parts[1]}';
-                                  }
-                                } else {
-                                  displayLabel = formatted;
-                                }
-                                return Text(
-                                  displayLabel,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Container(
+              width: (chartData.length * 50.0).clamp(
+                MediaQuery.of(context).size.width - 32,
+                double.infinity,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: BarChart(
+                BarChartData(
+                  maxY: maxQty * 1.25,
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() >= 0 &&
+                              value.toInt() < chartData.length) {
+                            final item = chartData[value.toInt()];
+                            if (_selectedMode == ItemAnalyticsMode.range) {
+                              final d = DateTime.tryParse(item['date']);
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Consumer(
+                                  builder: (context, ref, _) {
+                                    final formatDate = ref.watch(
+                                      formatDateProvider,
+                                    );
+                                    if (d == null) return const Text('');
+                                    final formatted = formatDate(d);
+                                    final parts = formatted.split('/');
+                                    String displayLabel;
+                                    if (parts.length >= 2) {
+                                      if (formatted.startsWith(
+                                        RegExp(r'\d{4}'),
+                                      )) {
+                                        displayLabel =
+                                            '${parts[1]}/${parts[2]}';
+                                      } else {
+                                        displayLabel =
+                                            '${parts[0]}/${parts[1]}';
+                                      }
+                                    } else {
+                                      displayLabel = formatted;
+                                    }
+                                    return Text(
+                                      displayLabel,
+                                      style: const TextStyle(fontSize: 10),
+                                    );
+                                  },
+                                ),
+                              );
+                            } else {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  item['hour'],
                                   style: const TextStyle(fontSize: 10),
-                                );
-                              },
-                            ),
-                          );
-                        } else {
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              item['hour'],
-                              style: const TextStyle(fontSize: 10),
-                            ),
-                          );
+                                ),
+                              );
+                            }
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                    leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                  ),
+                  barTouchData: BarTouchData(
+                    enabled: false, // Disable touch since we show always
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipColor: (_) => Colors.transparent,
+                      tooltipPadding: EdgeInsets.zero,
+                      tooltipMargin: 2,
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        if (rod.toY == 0) return null;
+                        return BarTooltipItem(
+                          formatQuantity(rod.toY),
+                          TextStyle(
+                            color: rod.color ?? AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  gridData: const FlGridData(show: false),
+                  barGroups: List.generate(chartData.length, (index) {
+                    final item = chartData[index];
+
+                    // Create a rod for each unit
+                    List<BarChartRodData> rods = [];
+                    // Collect indices to show tooltip for
+                    List<int> showingTooltipIndicators = [];
+
+                    for (int i = 0; i < units.length; i++) {
+                      final u = units[i];
+                      final qty = (item[u] as num?)?.toDouble() ?? 0.0;
+                      if (qty > 0 || units.length == 1) {
+                        rods.add(
+                          BarChartRodData(
+                            toY: qty,
+                            color: unitColors[u],
+                            width: units.length > 1
+                                ? 8
+                                : 16, // Thinner bars if multiple
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        );
+                        if (qty > 0) {
+                          showingTooltipIndicators.add(rods.length - 1);
                         }
                       }
-                      return const Text('');
-                    },
-                  ),
-                ),
-                leftTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-              ),
-              barTouchData: BarTouchData(
-                enabled: false,
-                touchTooltipData: BarTouchTooltipData(
-                  getTooltipColor: (_) => Colors.transparent,
-                  tooltipPadding: EdgeInsets.zero,
-                  tooltipMargin: 2,
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                    if (rod.toY == 0) return null;
-                    return BarTooltipItem(
-                      formatQuantity(rod.toY),
-                      const TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                      ),
+                    }
+
+                    // If no rods (no sales), still return group
+                    return BarChartGroupData(
+                      x: index,
+                      barRods: rods,
+                      barsSpace: 2,
+                      showingTooltipIndicators: showingTooltipIndicators,
                     );
-                  },
+                  }),
                 ),
               ),
-              borderData: FlBorderData(show: false),
-              gridData: const FlGridData(show: false),
-              barGroups: List.generate(chartData.length, (index) {
-                final item = chartData[index];
-                final qty = (item['qty'] as num?)?.toDouble() ?? 0.0;
-                return BarChartGroupData(
-                  x: index,
-                  barRods: [
-                    BarChartRodData(
-                      toY: qty,
-                      color: AppColors.primary,
-                      width: 16,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ],
-                  showingTooltipIndicators: [0],
-                );
-              }),
             ),
           ),
         ),
@@ -627,6 +742,7 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
 
   Widget _buildWeekdayContent(Map<String, dynamic> data, int weeksBack) {
     String getDayName(int w) {
+      if (w == 0) return "Week";
       switch (w) {
         case 1:
           return "Monday";
@@ -654,6 +770,19 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
     final history = data['history'] as List<dynamic>;
     final peakDay = data['peakDay'] as String;
 
+    final units = (data['units'] as List?)?.cast<String>() ?? [];
+    // Calculate avg qty per unit
+    final Map<String, double> avgQtyByUnit = {};
+    if (history.isNotEmpty && units.isNotEmpty) {
+      for (var unit in units) {
+        double sum = 0;
+        for (var day in history) {
+          sum += (day[unit] as num?)?.toDouble() ?? 0.0;
+        }
+        avgQtyByUnit[unit] = sum / history.length;
+      }
+    }
+
     if (history.isEmpty) {
       return Center(
         child: Column(
@@ -668,6 +797,50 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
           ],
         ),
       );
+    }
+
+    // Calculate maxQty for headroom
+    double maxQty = 0;
+    if (history.isNotEmpty) {
+      maxQty = history
+          .map((e) {
+            double maxUnitInSlot = 0;
+            // Checks max of single unit if we break it down
+            if (units.isNotEmpty) {
+              for (var unit in units) {
+                final q = (e[unit] as num?)?.toDouble() ?? 0.0;
+                if (q > maxUnitInSlot) maxUnitInSlot = q;
+              }
+            } else {
+              maxUnitInSlot = (e['qty'] as num).toDouble();
+            }
+            return maxUnitInSlot;
+          })
+          .reduce((a, b) => a > b ? a : b);
+    }
+    if (maxQty == 0) maxQty = 5; // Default if no data
+
+    // Define colors for units (Consistent with standard view)
+    final List<Color> unitColorsPalette = [
+      AppColors.primary,
+      Colors.orange,
+      Colors.green,
+      Colors.red,
+      Colors.purple,
+      Colors.teal,
+    ];
+    final Map<String, Color> unitColors = {};
+    for (int i = 0; i < units.length; i++) {
+      unitColors[units[i]] = unitColorsPalette[i % unitColorsPalette.length];
+    }
+
+    String avgQtyText = formatQuantity(avgQty);
+    if (avgQtyByUnit.isNotEmpty) {
+      final parts = <String>[];
+      avgQtyByUnit.forEach((unit, qty) {
+        parts.add("${formatQuantity(qty)} $unit");
+      });
+      avgQtyText = parts.join(", ");
     }
 
     final actualWeeks = data['totalWeeks'] ?? weeksBack;
@@ -688,11 +861,7 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
         Row(
           children: [
             Expanded(
-              child: _MetricCard(
-                "Avg Quantity",
-                formatQuantity(avgQty),
-                Colors.blue,
-              ),
+              child: _MetricCard("Avg Quantity", avgQtyText, Colors.blue),
             ),
             const SizedBox(width: 8),
             Expanded(child: _MetricCard("Peak Day", peakDay, Colors.orange)),
@@ -729,122 +898,228 @@ class _ItemAnalysisModalState extends ConsumerState<_ItemAnalysisModal> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Card(
-          color: const Color(0xFFFFF8E1),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                const Icon(Icons.lightbulb_outline, color: Colors.amber),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    "On ${getDayName(_selectedWeekday)}s, this item contributes ${(contribution * 100).toStringAsFixed(1)}% of total sales",
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+        // Contribution
+        if (_selectedWeekday != 0)
+          Card(
+            color: const Color(0xFFFFF8E1),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.lightbulb_outline, color: Colors.amber),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "${getDayName(_selectedWeekday)} contributes ${(contribution * 100).toStringAsFixed(1)}% of weekly sales",
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
 
-        const SizedBox(height: 16),
+        if (_selectedWeekday != 0 && peakDay != "N/A") ...[
+          const SizedBox(height: 16),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.trending_up, color: Colors.green),
+              title: const Text("Peak Day"),
+              subtitle: Text(
+                "Most ${widget.item.itemName} are sold on $peakDay",
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 24),
         const Text(
           "Selling Quantity History",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 8),
+        // Legend if multiple units
+        if (units.length > 1)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: units.map((u) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: unitColors[u],
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(u, style: const TextStyle(fontSize: 12)),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        const SizedBox(height: 16),
         SizedBox(
           height: 200,
-          child: BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.spaceAround,
-              gridData: const FlGridData(show: false),
-              titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (value, meta) {
-                      if (value.toInt() >= 0 &&
-                          value.toInt() < history.length) {
-                        final item = history[value.toInt()];
-                        final d = DateTime.tryParse(item['date']);
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Consumer(
-                            builder: (context, ref, _) {
-                              if (d == null) return const Text('');
-                              final formatDate = ref.watch(formatDateProvider);
-                              final formatted = formatDate(d);
-                              final parts = formatted.split('/');
-                              String displayLabel;
-                              if (parts.length >= 2) {
-                                if (formatted.startsWith(RegExp(r'\d{4}'))) {
-                                  displayLabel = '${parts[1]}/${parts[2]}';
-                                } else {
-                                  displayLabel = '${parts[0]}/${parts[1]}';
-                                }
-                              } else {
-                                displayLabel = formatted;
-                              }
-                              return Text(
-                                displayLabel,
-                                style: const TextStyle(fontSize: 10),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Container(
+              width: (history.length * 60.0).clamp(
+                MediaQuery.of(context).size.width - 32,
+                double.infinity,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: BarChart(
+                BarChartData(
+                  maxY: maxQty * 1.25, // 25% headroom
+                  alignment: BarChartAlignment.spaceAround,
+                  gridData: const FlGridData(show: false),
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() >= 0 &&
+                              value.toInt() < history.length) {
+                            final item = history[value.toInt()];
+
+                            // For Weekly View: Display Week Range
+                            if (_selectedWeekday == 0) {
+                              final range = item['weekRange'] as String? ?? "";
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  range,
+                                  style: const TextStyle(fontSize: 8),
+                                  textAlign: TextAlign.center,
+                                ),
                               );
-                            },
+                            }
+
+                            // For Weekday View or fallback
+                            final dateStr =
+                                item['date'] as String? ??
+                                item['start_date'] as String?;
+                            final d = dateStr != null
+                                ? DateTime.tryParse(dateStr)
+                                : null;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Consumer(
+                                builder: (context, ref, _) {
+                                  if (d == null) return const Text('');
+                                  final formatDate = ref.watch(
+                                    formatDateProvider,
+                                  );
+                                  final formatted = formatDate(d);
+                                  final parts = formatted.split('/');
+                                  // Shorten date for chart
+                                  String label = formatted;
+                                  if (parts.length >= 2) {
+                                    if (formatted.startsWith(
+                                      RegExp(r'\d{4}'),
+                                    )) {
+                                      label = '${parts[1]}/${parts[2]}';
+                                    } else {
+                                      label = '${parts[0]}/${parts[1]}';
+                                    }
+                                  }
+                                  return Text(
+                                    label,
+                                    style: const TextStyle(fontSize: 10),
+                                  );
+                                },
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                    leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                  ),
+                  barTouchData: BarTouchData(
+                    enabled: false,
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipColor: (_) => Colors.transparent,
+                      tooltipPadding: EdgeInsets.zero,
+                      tooltipMargin: 2,
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        if (rod.toY == 0) return null;
+                        return BarTooltipItem(
+                          formatQuantity(rod.toY),
+                          TextStyle(
+                            color: rod.color ?? AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
                           ),
                         );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                ),
-                leftTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-              ),
-              barTouchData: BarTouchData(
-                enabled: false,
-                touchTooltipData: BarTouchTooltipData(
-                  getTooltipColor: (_) => Colors.transparent,
-                  tooltipPadding: EdgeInsets.zero,
-                  tooltipMargin: 2,
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                    if (rod.toY == 0) return null;
-                    return BarTooltipItem(
-                      rod.toY.toStringAsFixed(0),
-                      const TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              barGroups: List.generate(history.length, (index) {
-                final item = history[index];
-                return BarChartGroupData(
-                  x: index,
-                  barRods: [
-                    BarChartRodData(
-                      toY: (item['qty'] as num).toDouble(),
-                      color: AppColors.primary,
-                      width: 16,
-                      borderRadius: BorderRadius.circular(4),
+                      },
                     ),
-                  ],
-                  showingTooltipIndicators: [0],
-                );
-              }),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  barGroups: List.generate(history.length, (index) {
+                    final item = history[index];
+
+                    List<BarChartRodData> rods = [];
+                    List<int> showingTooltipIndicators = [];
+
+                    if (units.isNotEmpty) {
+                      for (int i = 0; i < units.length; i++) {
+                        final u = units[i];
+                        final qty = (item[u] as num?)?.toDouble() ?? 0.0;
+                        if (qty > 0 || units.length == 1) {
+                          rods.add(
+                            BarChartRodData(
+                              toY: qty,
+                              color: unitColors[u],
+                              width: units.length > 1 ? 8 : 16,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          );
+                          if (qty > 0) {
+                            showingTooltipIndicators.add(rods.length - 1);
+                          }
+                        }
+                      }
+                    } else {
+                      // Fallback for no units logic (legacy data?)
+                      final qty = (item['qty'] as num).toDouble();
+                      rods.add(
+                        BarChartRodData(
+                          toY: qty,
+                          color: AppColors.primary,
+                          width: 16,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      );
+                      if (qty > 0) showingTooltipIndicators.add(0);
+                    }
+
+                    return BarChartGroupData(
+                      x: index,
+                      barRods: rods,
+                      barsSpace: 2,
+                      showingTooltipIndicators: showingTooltipIndicators,
+                    );
+                  }),
+                ),
+              ),
             ),
           ),
         ),

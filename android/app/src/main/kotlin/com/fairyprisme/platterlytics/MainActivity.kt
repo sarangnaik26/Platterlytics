@@ -1,4 +1,4 @@
-package com.platterlytics.platterlytics
+package com.fairyprisme.platterlytics
 
 import io.flutter.embedding.android.FlutterActivity
 
