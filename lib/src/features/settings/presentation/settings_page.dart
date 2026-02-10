@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'settings_providers.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -328,6 +329,24 @@ class SettingsPage extends ConsumerWidget {
             title: Text("Contact Us"),
             subtitle: Text("fairyprisme@gmail.com"),
           ),
+          const Divider(),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    "Version ${snapshot.data!.version}",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+          const SizedBox(height: 20),
         ],
       ),
     );
