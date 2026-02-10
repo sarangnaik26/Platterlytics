@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:path_provider/path_provider.dart';
 import '../domain/bill_model.dart';
+import '../application/bill_pdf_service.dart';
 import '../../settings/presentation/bill_settings_provider.dart';
 import '../../settings/domain/bill_settings_model.dart';
 import '../../settings/presentation/date_format_provider.dart';
@@ -86,10 +87,22 @@ class _BillSuccessViewState extends ConsumerState<BillSuccessView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Bill Generated"),
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.print),
+            onPressed: () {
+              final formatDate = ref.read(formatDateProvider);
+              settingsAsync.whenData((settings) {
+                BillPdfService().printBill(widget.bill, settings, formatDate);
+              });
+            },
+          ),
+        ],
       ),
       body: settingsAsync.when(
         data: (settings) => SingleChildScrollView(

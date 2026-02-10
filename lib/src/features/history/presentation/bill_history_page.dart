@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import '../../billing/data/bill_repository.dart';
 import '../../billing/domain/bill_model.dart';
+import '../../billing/application/bill_pdf_service.dart';
 import '../../settings/presentation/bill_settings_provider.dart';
 import '../../settings/presentation/date_format_provider.dart';
 import '../../../core/utils/formatters.dart';
@@ -120,7 +118,10 @@ class BillDetailsPage extends ConsumerWidget {
             icon: const Icon(Icons.print),
             onPressed: () {
               final formatDate = ref.read(formatDateProvider);
-              _printBill(bill, symbol, formatDate);
+              final settings = ref.read(billSettingsControllerProvider).value;
+              if (settings != null) {
+                BillPdfService().printBill(bill, settings, formatDate);
+              }
             },
           ),
         ],
@@ -162,81 +163,6 @@ class BillDetailsPage extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Future<void> _printBill(
-    Bill bill,
-    String symbol,
-    String Function(DateTime) formatDate,
-  ) async {
-    final doc = pw.Document();
-
-    doc.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.roll80,
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Center(
-                child: pw.Text(
-                  "Platterlytics",
-                  style: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold,
-                    fontSize: 24,
-                  ),
-                ),
-              ),
-              pw.Divider(),
-              pw.Text("Bill #${bill.billId}"),
-              pw.Text(
-                "Date: ${formatDate(DateTime.tryParse(bill.date) ?? DateTime.now())} ${bill.time}",
-              ),
-              pw.Divider(),
-              ...bill.items.map(
-                (item) => pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Expanded(
-                      child: pw.Text(
-                        "${formatQuantity(item.quantity)} x ${item.itemName} (${item.unit})",
-                      ),
-                    ),
-                    pw.Text("$symbol${item.totalItemPrice.toStringAsFixed(2)}"),
-                  ],
-                ),
-              ),
-              pw.Divider(),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text(
-                    "Total",
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  pw.Text(
-                    "$symbol${bill.totalPrice.toStringAsFixed(2)}",
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                ],
-              ),
-              pw.SizedBox(height: 20),
-              pw.Center(
-                child: pw.Text(
-                  "Thank you!",
-                  style: const pw.TextStyle(fontSize: 12),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => doc.save(),
-      name: 'Bill-${bill.billId}',
     );
   }
 }
