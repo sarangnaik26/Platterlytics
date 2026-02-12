@@ -84,13 +84,16 @@ class _BillHistoryPageState extends ConsumerState<BillHistoryPage> {
                   },
                 ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => BillDetailsPage(bill: bill),
                     ),
                   );
+                  if (result == true) {
+                    ref.invalidate(billHistoryProvider);
+                  }
                 },
               );
             },
@@ -121,6 +124,50 @@ class BillDetailsPage extends ConsumerWidget {
               final settings = ref.read(billSettingsControllerProvider).value;
               if (settings != null) {
                 BillPdfService().printBill(bill, settings, formatDate);
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Delete Bill"),
+                  content: const Text(
+                    "Are you sure you want to delete this bill? This will permanently delete the bill data and it won't be even shown in analytics.",
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text("Cancel"),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text("Delete"),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true) {
+                if (context.mounted && bill.billId != null) {
+                  await ref
+                      .read(billRepositoryProvider)
+                      .deleteBill(bill.billId!);
+                  if (context.mounted) {
+                    Navigator.pop(context, true);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Bill deleted successfully"),
+                      ),
+                    );
+                  }
+                }
               }
             },
           ),

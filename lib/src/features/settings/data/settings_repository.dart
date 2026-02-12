@@ -52,4 +52,23 @@ class SettingsRepository {
   String getDateFormat() {
     return _prefs.getString(_dateFormatKey) ?? 'dd/MM/yyyy';
   }
+
+  static const _autoDeleteBillsFreqKey = 'auto_delete_bills_frequency';
+  static const _autoDeleteBillsMonthsKey = 'auto_delete_bills_months';
+
+  Future<void> setAutoDeleteBillsFrequency(String frequency) async {
+    await _prefs.setString(_autoDeleteBillsFreqKey, frequency);
+  }
+
+  String getAutoDeleteBillsFrequency() {
+    return _prefs.getString(_autoDeleteBillsFreqKey) ?? 'never';
+  }
+
+  Future<void> setAutoDeleteBillsMonths(int months) async {
+    await _prefs.setInt(_autoDeleteBillsMonthsKey, months);
+  }
+
+  int getAutoDeleteBillsMonths() {
+    return _prefs.getInt(_autoDeleteBillsMonthsKey) ?? 1;
+  }
 }

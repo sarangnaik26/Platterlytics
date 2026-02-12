@@ -140,6 +140,134 @@ class SettingsPage extends ConsumerWidget {
               );
             },
           ),
+
+          const Divider(),
+
+          // Bill Data Management
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              "Bill Data Management",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Consumer(
+            builder: (context, ref, child) {
+              final settingsAsync = ref.watch(
+                autoDeleteBillsSettingsControllerProvider,
+              );
+              return settingsAsync.when(
+                data: (settings) => Column(
+                  children: [
+                    ListTile(
+                      title: const Text("Auto-delete Old Bills"),
+                      subtitle: Text(
+                        "Frequency: ${_getFrequencyLabel(settings.frequency, settings.customMonths)}",
+                      ),
+                      trailing: DropdownButton<String>(
+                        value: settings.frequency,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'never',
+                            child: Text("Never"),
+                          ),
+                          DropdownMenuItem(
+                            value: '1_month',
+                            child: Text("Older than 1 Month"),
+                          ),
+                          DropdownMenuItem(
+                            value: '3_months',
+                            child: Text("Older than 3 Months"),
+                          ),
+                          DropdownMenuItem(
+                            value: '6_months',
+                            child: Text("Older than 6 Months"),
+                          ),
+                          DropdownMenuItem(
+                            value: '12_months',
+                            child: Text("Older than 12 Months"),
+                          ),
+                          DropdownMenuItem(
+                            value: 'custom',
+                            child: Text("Custom Months"),
+                          ),
+                        ],
+                        onChanged: (val) async {
+                          if (val != null && val != settings.frequency) {
+                            if (val != 'never') {
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text("Enable Auto-Delete?"),
+                                  content: const Text(
+                                    "Bills older than the selected period will be permanently deleted on app startup. This cannot be undone and will affect analytics.",
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(ctx, false),
+                                      child: const Text("Cancel"),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                      ),
+                                      child: const Text(
+                                        "Enable",
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirmed != true) return;
+                            }
+                            ref
+                                .read(
+                                  autoDeleteBillsSettingsControllerProvider
+                                      .notifier,
+                                )
+                                .updateFrequency(val);
+                          }
+                        },
+                      ),
+                    ),
+                    if (settings.frequency == 'custom')
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Row(
+                          children: [
+                            const Text("Delete older than "),
+                            SizedBox(
+                              width: 50,
+                              child: TextFormField(
+                                initialValue: settings.customMonths.toString(),
+                                keyboardType: TextInputType.number,
+                                onChanged: (val) {
+                                  final months = int.tryParse(val);
+                                  if (months != null && months > 0) {
+                                    ref
+                                        .read(
+                                          autoDeleteBillsSettingsControllerProvider
+                                              .notifier,
+                                        )
+                                        .updateCustomMonths(months);
+                                  }
+                                },
+                              ),
+                            ),
+                            const Text(" months"),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, s) => Text("Error: $e"),
+              );
+            },
+          ),
           const Divider(),
 
           // Cache Settings
@@ -352,7 +480,7 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  String _getFrequencyLabel(String val) {
+  String _getFrequencyLabel(String val, [int? customMonths]) {
     switch (val) {
       case 'week':
         return 'Weekly';
@@ -360,8 +488,16 @@ class SettingsPage extends ConsumerWidget {
         return 'Monthly';
       case 'year':
         return 'Yearly';
+      case '1_month':
+        return 'Older than 1 Month';
+      case '3_months':
+        return 'Older than 3 Months';
+      case '6_months':
+        return 'Older than 6 Months';
+      case '12_months':
+        return 'Older than 12 Months';
       case 'custom':
-        return 'Custom';
+        return 'Older than $customMonths Months';
       case 'never':
         return 'Never';
       default:

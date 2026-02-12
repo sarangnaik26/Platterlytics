@@ -80,6 +80,45 @@ class BillRepository {
     }
     return bills;
   }
+
+  Future<void> deleteBill(int billId) async {
+    final db = await _db;
+    await db.transaction((txn) async {
+      await txn.delete('bill_items', where: 'bill_id = ?', whereArgs: [billId]);
+      await txn.delete('bill', where: 'bill_id = ?', whereArgs: [billId]);
+    });
+  }
+
+  Future<int> deleteBillsOlderThan(DateTime date) async {
+    final db = await _db;
+    final dateStr = date.toIso8601String().substring(
+      0,
+      10,
+    ); // Format YYYY-MM-DD
+
+    // Get IDs of bills to delete
+    final result = await db.query(
+      'bill',
+      columns: ['bill_id'],
+      where: 'date < ?',
+      whereArgs: [dateStr],
+    );
+
+    final ids = result.map((r) => r['bill_id'] as int).toList();
+    if (ids.isEmpty) return 0;
+
+    final count = await db.transaction((txn) async {
+      // Delete items first
+      await txn.delete(
+        'bill_items',
+        where: 'bill_id IN (${ids.join(',')})', // Safe since IDs are ints
+      );
+      // Delete bills
+      return await txn.delete('bill', where: 'bill_id IN (${ids.join(',')})');
+    });
+
+    return count;
+  }
 }
 
 final billRepositoryProvider = Provider<BillRepository>((ref) {

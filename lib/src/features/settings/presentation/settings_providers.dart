@@ -148,3 +148,51 @@ class DateFormatController extends _$DateFormatController {
     state = AsyncValue.data(format);
   }
 }
+
+class AutoDeleteBillsSettings {
+  final String
+  frequency; // never, 1_month, 3_months, 6_months, 12_months, custom
+  final int customMonths;
+
+  AutoDeleteBillsSettings({
+    required this.frequency,
+    required this.customMonths,
+  });
+
+  AutoDeleteBillsSettings copyWith({String? frequency, int? customMonths}) {
+    return AutoDeleteBillsSettings(
+      frequency: frequency ?? this.frequency,
+      customMonths: customMonths ?? this.customMonths,
+    );
+  }
+}
+
+final autoDeleteBillsSettingsControllerProvider =
+    AsyncNotifierProvider<
+      AutoDeleteBillsSettingsController,
+      AutoDeleteBillsSettings
+    >(AutoDeleteBillsSettingsController.new);
+
+class AutoDeleteBillsSettingsController
+    extends AsyncNotifier<AutoDeleteBillsSettings> {
+  @override
+  Future<AutoDeleteBillsSettings> build() async {
+    final repo = await ref.watch(settingsRepositoryProvider.future);
+    return AutoDeleteBillsSettings(
+      frequency: repo.getAutoDeleteBillsFrequency(),
+      customMonths: repo.getAutoDeleteBillsMonths(),
+    );
+  }
+
+  Future<void> updateFrequency(String frequency) async {
+    final repo = await ref.read(settingsRepositoryProvider.future);
+    await repo.setAutoDeleteBillsFrequency(frequency);
+    state = AsyncValue.data(state.value!.copyWith(frequency: frequency));
+  }
+
+  Future<void> updateCustomMonths(int months) async {
+    final repo = await ref.read(settingsRepositoryProvider.future);
+    await repo.setAutoDeleteBillsMonths(months);
+    state = AsyncValue.data(state.value!.copyWith(customMonths: months));
+  }
+}

@@ -37,7 +37,7 @@ dependencies:
   flutter_riverpod: ^2.6.1
   riverpod_annotation: ^2.6.1
   sqflite: ^2.4.2
-  sqflite_common_ffi: ^2.3.4 # For Windows support
+  # sqflite_common_ffi: ^2.3.4 # For Windows support
   path: ^1.9.1
   path_provider: ^2.1.5
   google_fonts: ^6.2.1

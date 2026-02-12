@@ -4,6 +4,14 @@ import 'src/core/theme/app_theme.dart';
 import 'src/features/settings/presentation/settings_providers.dart';
 import 'src/features/home/presentation/main_screen.dart';
 
+import 'src/features/billing/application/bill_cleanup_service.dart';
+
+// Initialization provider
+final appStartupProvider = FutureProvider<void>((ref) async {
+  // Run bill cleanup on startup
+  await ref.read(billCleanupServiceProvider).runCleanup();
+});
+
 void main() {
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -13,6 +21,9 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Eagerly initialize app startup logic
+    ref.watch(appStartupProvider);
+
     final themeMode = ref.watch(themeModeControllerProvider);
 
     return MaterialApp(
