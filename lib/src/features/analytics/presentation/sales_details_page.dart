@@ -517,7 +517,7 @@ class _SalesDetailsPageState extends ConsumerState<SalesDetailsPage> {
               ),
             ),
             const SizedBox(width: 8),
-            _MetricCard("Avg Bills", avgBills.toStringAsFixed(1), Colors.teal),
+            _MetricCard("Avg Bills", avgBills.round().toString(), Colors.teal),
           ],
         ),
         const SizedBox(height: 16),

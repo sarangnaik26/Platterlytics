@@ -126,9 +126,13 @@ class AnalyticsRepository {
         .subtract(Duration(days: (weeksBack + 2) * 7))
         .toIso8601String()
         .split('T')[0];
-    final todayStr = now.toIso8601String().split('T')[0];
 
-    // Query for specific weekdays in range
+    // Calculate the most recent Sunday that has fully passed (until Monday arrives).
+    final daysSinceSunday = now.weekday;
+    final lastSunday = now.subtract(Duration(days: daysSinceSunday));
+    final lastSundayStr = lastSunday.toIso8601String().split('T')[0];
+
+    // Query for specific weekdays in range, capped at last Sunday to avoid partial week bias
     final result = await db.rawQuery(
       '''
       SELECT date, SUM(total_price) as sales, COUNT(*) as bill_count
@@ -138,7 +142,7 @@ class AnalyticsRepository {
       ORDER BY date DESC
       LIMIT ?
       ''',
-      [startDate, todayStr, '$sqliteWeekday', weeksBack],
+      [startDate, lastSundayStr, '$sqliteWeekday', weeksBack],
     );
 
     // Filter to ensure we only have the requested number of weeks
@@ -226,13 +230,37 @@ class AnalyticsRepository {
     }
 
     // Contribution (Weekday sales vs Total Sales in the same period)
+    // We want: (Total Sales on this Weekday over period) / (Total Sales of Store over period)
+    // The previous implementation calculated totalPeriodSales for the range, which is correct for "Total Store Sales".
+    // So: Contribution = (Sum of Sales on Mondays) / (Sum of Sales on All Days in Range)
+    // So: Contribution = (Sum of Sales on Mondays) / (Sum of Sales on All Days in Range)
+    // We determine the effective start date: Minimum of (Oldest Match Date) and (Standard N-Weeks Lookback)
+    final oldestMatchDate = DateTime.parse(history.first['date'] as String);
+    final standardLookbackDate = now.subtract(Duration(days: weeksBack * 7));
+    // We compare just the date part ideally, but standardLookbackDate has time.
+    // oldestMatchDate is "YYYY-MM-DD" parsed so time is 00:00. standardLookbackDate has time.
+    // Let's strip time from standardLookup.
+    final standardLookbackDateOnly = DateTime(
+      standardLookbackDate.year,
+      standardLookbackDate.month,
+      standardLookbackDate.day,
+    );
+
+    final effectiveStartDate =
+        oldestMatchDate.isBefore(standardLookbackDateOnly)
+        ? oldestMatchDate
+        : standardLookbackDateOnly;
+    final effectiveStartDateStr = effectiveStartDate.toIso8601String().split(
+      'T',
+    )[0];
+
     final totalPeriodSalesResult = await db.rawQuery(
       '''
       SELECT SUM(total_price) as total
       FROM bill
       WHERE date >= ? AND date <= ?
       ''',
-      [history.first['date'], latestDate],
+      [effectiveStartDateStr, lastSundayStr],
     );
     double totalPeriodSales =
         (totalPeriodSalesResult.first['total'] as num?)?.toDouble() ?? 1.0;
@@ -445,7 +473,11 @@ class AnalyticsRepository {
         .subtract(Duration(days: (weeksBack + 2) * 7))
         .toIso8601String()
         .split('T')[0];
-    final todayStr = now.toIso8601String().split('T')[0];
+
+    // Calculate the most recent Sunday that has fully passed (until Monday arrives).
+    final daysSinceSunday = now.weekday;
+    final lastSunday = now.subtract(Duration(days: daysSinceSunday));
+    final lastSundayStr = lastSunday.toIso8601String().split('T')[0];
 
     // Quantity Breakdown by Unit for this weekday
     final qtyByUnitResult = await db.rawQuery(
@@ -457,7 +489,7 @@ class AnalyticsRepository {
         GROUP BY bi.unit
         ORDER BY qty DESC
         ''',
-      [menuId, startDate, todayStr, '$sqliteWeekday'],
+      [menuId, startDate, lastSundayStr, '$sqliteWeekday'],
     );
     final Map<String, double> totalQtyByUnit = {
       for (var row in qtyByUnitResult)
@@ -474,7 +506,7 @@ class AnalyticsRepository {
       GROUP BY b.date, bi.unit
       ORDER BY b.date DESC
       ''',
-      [menuId, startDate, todayStr, '$sqliteWeekday'],
+      [menuId, startDate, lastSundayStr, '$sqliteWeekday'],
     );
 
     // Group by Date for the history list
@@ -545,11 +577,11 @@ class AnalyticsRepository {
       [menuId, menuId, latestDate],
     );
 
-    // Trend
+    // Trend (Growth vs previous available weekday) - based on Sales Amount
     double growth = 0.0;
     if (history.length >= 2) {
-      final current = (history.last['qty'] as num).toDouble();
-      final prev = (history[history.length - 2]['qty'] as num).toDouble();
+      final current = (history.last['total'] as num).toDouble();
+      final prev = (history[history.length - 2]['total'] as num).toDouble();
       if (prev > 0) {
         growth = (current - prev) / prev;
       }
@@ -573,30 +605,53 @@ class AnalyticsRepository {
     }
 
     // Contribution (Item Sales vs Total Sales on that weekday)
-    final dateList = history.map((e) => "'${e['date']}'").join(',');
-    final totalSalesOnDaysResult = await db.rawQuery('''
-      SELECT SUM(total_price) as total
-      FROM bill
-      WHERE date IN ($dateList)
-      ''');
-    double totalSalesOnDays =
-        (totalSalesOnDaysResult.first['total'] as num?)?.toDouble() ?? 1.0;
-    if (totalSalesOnDays == 0) totalSalesOnDays = 1.0;
+    // Contribution (Item Sales on Weekday vs Total Item Sales on All Days in same period)
+    // Same logic: effective start date
+    final oldestMatchDate = DateTime.parse(history.first['date'] as String);
+    final standardLookbackDate = now.subtract(Duration(days: weeksBack * 7));
+    final standardLookbackDateOnly = DateTime(
+      standardLookbackDate.year,
+      standardLookbackDate.month,
+      standardLookbackDate.day,
+    );
 
-    double contribution = totalItemSales / totalSalesOnDays;
+    final effectiveStartDate =
+        oldestMatchDate.isBefore(standardLookbackDateOnly)
+        ? oldestMatchDate
+        : standardLookbackDateOnly;
+    final effectiveStartDateStr = effectiveStartDate.toIso8601String().split(
+      'T',
+    )[0];
+
+    final totalItemSalesAllDaysResult = await db.rawQuery(
+      '''
+      SELECT SUM(bi.total_item_price) as total
+      FROM bill_items bi
+      JOIN bill b ON bi.bill_id = b.bill_id
+      WHERE bi.menu_id = ? AND b.date >= ? AND b.date <= ?
+      ''',
+      [menuId, effectiveStartDateStr, lastSundayStr],
+    );
+    double totalItemSalesAllDays =
+        (totalItemSalesAllDaysResult.first['total'] as num?)?.toDouble() ?? 1.0;
+    if (totalItemSalesAllDays == 0) totalItemSalesAllDays = 1.0;
+
+    // specific weekday sales / total item sales
+    double contribution = totalItemSales / totalItemSalesAllDays;
 
     // Best Selling Weekday (Peak Day)
+    // Best Selling Weekday (Peak Day) - Based on highest AVERAGE SALES AMOUNT
     final peakDayResult = await db.rawQuery(
       '''
-      SELECT strftime('%w', b.date) as wday, AVG(bi.quantity) as avg_qty
+      SELECT strftime('%w', b.date) as wday, AVG(bi.total_item_price) as avg_amount
       FROM bill_items bi
       JOIN bill b ON bi.bill_id = b.bill_id
       WHERE bi.menu_id = ? AND b.date >= ? AND b.date <= ?
       GROUP BY wday
-      ORDER BY avg_qty DESC
+      ORDER BY avg_amount DESC
       LIMIT 1
       ''',
-      [menuId, startDate, todayStr],
+      [menuId, startDate, lastSundayStr],
     );
 
     String peakDayStr = "N/A";
@@ -629,6 +684,7 @@ class AnalyticsRepository {
       'peakDay': peakDayStr,
       'units': totalQtyByUnit.keys.toList(),
       'totalQtyByUnit': totalQtyByUnit,
+      'totalWeeks': history.length,
     };
   }
 

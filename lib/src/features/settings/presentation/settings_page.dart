@@ -424,6 +424,35 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.help_outline),
+            title: const Text("How to Use"),
+            subtitle: const Text("Guide and documentation"),
+            onTap: () async {
+              final Uri url = Uri.parse(
+                'https://sarangnaik26.github.io/Platterlytics/how_to_use.html',
+              );
+              try {
+                if (!await launchUrl(url)) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Could not launch documentation"),
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Error launching documentation: $e"),
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.privacy_tip),
             title: const Text("Privacy Policy"),
             subtitle: const Text("Read our privacy policy"),
